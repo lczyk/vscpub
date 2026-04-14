@@ -1,0 +1,1664 @@
+openapi: 3.0.3
+info:
+  title: VCF Solutions Catalog API
+  description: |
+    The VCF Solutions Catalog API enables partners and vendors to publish, manage solutions on Vmware Cloud Foundation (VCF) Solutions Catalog. 
+    
+    This API provides comprehensive capabilities for:
+    - **Authentication**: Secure access using Vmware Cloud Services Console credentials (OAuth client credentials or API Refresh Tokens)
+    - **Product Publishing**: Create and manage products with detailed marketing information, technical specifications, and support details
+    
+    All operations require authentication via the `/auth` endpoint using Vmware Cloud Services Console credentials.
+    
+    #### Publisher Flow
+    
+    To publish content to the VCF Solutions Catalog, follow these steps:
+    
+    1. **Authenticate**: Use the Auth API (`/auth` endpoint) to obtain an access token
+        - Provide OAuth client credentials or API refresh token
+    
+    2. **Verify Permissions**: Ensure the following prerequisites are met:
+        - The API token or refresh token must have **Marketplace User Role** assigned
+        - The organization must be **enabled for publishing access**
+    
+    3. **Upload Resources** (if applicable): Use the content upload API to upload any resources or assets
+        - Upload product icons, screenshots, documentation, or other media files
+        - Save the content location URLs from the upload response
+    
+    4. **Create/Update Products**: Use the uploaded content locations in product creation or update APIs
+        - Reference the uploaded content URLs in product metadata
+        - Include all required product information and specifications
+  
+
+  version: 1.0.0
+  contact:
+    name: <to be identified>
+servers:
+  - url: https://api-devlvn.broadcom.net/vcf/cm/dev/gtw/api/v3
+    description: VSC Dev Server
+  - url: https://api-devlvn.broadcom.net/vcf/cm/qa/gtw/api/v3
+    description: VSC QA Server
+  - url: https://eapi-gcpstg.broadcom.com/vcf/vsc/gtw/api/v3
+    description: VSC Verify Server
+  - url: https://eapi.broadcom.com/vcf/vsc/gtw/api/v3
+    description: VSC Prod Server
+
+paths:
+  /auth:
+    post:
+      security: []  # No auth required
+      tags:
+        - Authentication
+      summary: Authenticate and fetch access token
+      description: |
+        Authenticate to the VCF Solutions Catalog API and obtain a bearer access token for subsequent API requests.
+        
+        This endpoint supports two authentication methods:
+        - **OAuth Client Credentials**: Use client ID and client secret from a Cloud Services OAuth app
+        - **API Token**: Use a refresh token generated from  Vmware Cloud Services Console
+        
+        The returned access token must be included in the Authorization header (as Bearer token) for all other API endpoints.
+        
+        **Prerequisites:**
+        - Active Vmware Cloud Services Console account
+        - Marketplace User Role assigned in the organization
+        - OAuth app credentials or API token generated from the console
+
+      operationId: authorize
+      externalDocs:
+        description: How to generate API Token/OAuth App Client Credentials from SaaS Console
+        url: https://techdocs.broadcom.com/us/en/vmware-cis/csc/cloud-services-console/saas/using-vmware-cloud-services-console/identity-access-management.html
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/AuthRequestByClientCredentials'
+                - $ref: '#/components/schemas/AuthRequestByAPIToken'
+
+      responses:
+        '200':
+          description: Request successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+
+  /products:
+    get:
+      tags:
+        - Publishing
+      summary: List all products in the catalog
+      description: |
+        Retrieves a list of products from the VCF Solutions Catalog for the signed in Publisher org. Returns summary information for each product accessible to the authenticated user.
+        
+        **Use Cases:**
+        - Browse available products in the catalog for a publisher
+        - Get an overview of all products for management purposes
+
+      operationId: listProducts
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of products to return (default 50, max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Number of products to skip for pagination (default 0)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of products retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListProductsResponse'
+        '401':
+          description: Unauthorized. The passed access token is invalid or the user doesn't have access to SaaS Console
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '403':
+          description: Access Denied. User doesn't have Marketplace User Role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+    post:
+      tags:
+        - Publishing
+      summary: Create a new product in the catalog
+      description: |
+        Creates a new product in the VCF Solutions Catalog with comprehensive details including marketing information, technical specifications, support details, and an initial version. Upon successful creation, the product enters PENDING status and undergoes review before being published to the catalog.
+        Compliance Reference: <to be filled>
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+            examples:
+              vmProduct:
+                summary: Virtual Machine Product (OVA)
+                value:
+                  product:
+                    displayName: "Enterprise Database Solution"
+                    logoURL: "https://storage.googleapis.com/vsc-content/logos/database-logo.png"
+                    productType: "DISTRIBUTABLE"
+                    marketingDetails:
+                      overview: "High-performance database solution optimized for VMware Cloud Foundation environments"
+                      description: "This enterprise-grade database solution provides robust data management capabilities with built-in high availability, automated backups, and seamless integration with VCF infrastructure. Features include: multi-node clustering, real-time replication, advanced security controls, and comprehensive monitoring dashboards."
+                      featureHighlights:
+                        - "High availability with automatic failover"
+                        - "Real-time data replication across nodes"
+                        - "Advanced encryption and security controls"
+                        - "Integrated monitoring and alerting"
+                      imageURLs:
+                        - "https://storage.googleapis.com/vsc-content/screenshots/dashboard.png"
+                        - "https://storage.googleapis.com/vsc-content/screenshots/admin-panel.png"
+                      videoURLs:
+                        - "https://www.youtube.com/watch?v=example123"
+                    supportDetails:
+                      websiteURL: "https://www.example.com/support"
+                      summary: "24/7 enterprise support available. Average response time: 2 hours for critical issues. Dedicated support portal with knowledge base and community forums."
+                      emailIds:
+                        - "support@example.com"
+                        - "enterprise-support@example.com"
+                      phoneNumbers:
+                        - "+1-800-123-4567"
+                      resources:
+                        - name: "Installation Guide"
+                          url: "https://storage.googleapis.com/vsc-content/docs/install-guide.pdf"
+                        - name: "Administrator Manual"
+                          url: "https://storage.googleapis.com/vsc-content/docs/admin-manual.pdf"
+                    techSpecs:
+                      formFactor: "VIRTUAL_MACHINES"
+                      artifactType: "OVA"
+                      osList:
+                        - "UBUNTU"
+                        - "RHEL"
+                      category: "DATABASES"
+                      vcfComponentNames:
+                        - "VSPHERE"
+                        - "VSAN"
+                      technicalSummary: "Requires 4 vCPUs, 16GB RAM, 100GB storage. Compatible with vSphere 7.0 and above. Supports VMware HA and DRS."
+                    solutionLicense: "BYOL"
+                    version:
+                      versionNumber: "1.0.0"
+                      releaseTag: "GENERAL_AVAILABILITY"
+                      assetDetails:
+                        assetURL: "https://storage.googleapis.com/vsc-content/products/database-v1.0.0.ova"
+                        hashDigest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                        hashAlgo: "SHA256"
+                      compliance:
+                        encryptionDetails:
+                          supportsEncryption: true
+                          encryptionTypes:
+                            - "USER_AUTHENTICATION"
+                            - "SECURING_DATA_AT_REST"
+                            - "SECURITY_COMMUNICATION_PROTOCOLS"
+                          supportsNonStandardEncryption: false
+                        exportCompliance:
+                          eccnDetails:
+                            eccn: "ECCN_5D992c"
+                          htsDetails:
+                            htsApplicable: true
+                            hts: "8523.49.20.00"
+                          licenseException: "ENC_UNRESTRICTED"
+                        eulaDetails:
+                          url: "https://storage.googleapis.com/vsc-content/legal/eula.pdf"
+              containerProduct:
+                summary: Container Product (Docker)
+                value:
+                  product:
+                    displayName: "Cloud-Native Web Application"
+                    logoURL: "https://storage.googleapis.com/vsc-content/logos/webapp-logo.png"
+                    productType: "DISTRIBUTABLE"
+                    marketingDetails:
+                      overview: "Scalable microservices-based web application for modern cloud environments"
+                      description: "Deploy a fully containerized web application with built-in load balancing, service discovery, and auto-scaling capabilities. Perfect for VCF environments running Kubernetes workloads."
+                      featureHighlights:
+                        - "Kubernetes-native deployment"
+                        - "Horizontal auto-scaling"
+                        - "Built-in health checks and monitoring"
+                      imageURLs:
+                        - "https://storage.googleapis.com/vsc-content/screenshots/webapp-ui.png"
+                    supportDetails:
+                      websiteURL: "https://www.example.com/support"
+                      summary: "Community support available via GitHub and Stack Overflow. Enterprise support packages available for purchase."
+                      emailIds:
+                        - "support@example.com"
+                    techSpecs:
+                      formFactor: "CONTAINERS"
+                      artifactType: "DOCKER"
+                      osList:
+                        - "LINUX"
+                      category: "BUSINESS_APPLICATION_SERVICES"
+                      vcfComponentNames:
+                        - "VSPHERE_KUBERNETES_SERVICE"
+                      technicalSummary: "Requires Kubernetes 1.24+. Minimum 2 CPU cores and 4GB RAM per pod. Compatible with standard CNI plugins."
+                    solutionLicense: "FREE"
+                    version:
+                      versionNumber: "2.1.0"
+                      releaseTag: "GENERAL_AVAILABILITY"
+                      assetDetails:
+                        containerAssets:
+                          repositoryName: "bitnami/nginx"
+                          imageTag: "2.1.0"
+                          deploymentInstruction: "docker pull bitnami/nginx"
+                          # uploadURL: "https://storage.googleapis.com/vsc-content/uploads/org-12345/nginx-2.1.0.tar"  # optional, for tar uploads
+                      compliance:
+                        encryptionDetails:
+                          supportsEncryption: true
+                          encryptionTypes:
+                            - "SECURITY_COMMUNICATION_PROTOCOLS"
+                          supportsNonStandardEncryption: false
+                        exportCompliance:
+                          eccnDetails:
+                            eccn: "ECCN_EAR99"
+                          htsDetails:
+                            htsApplicable: false
+                          licenseException: "NLR"
+                        eulaDetails:
+                          text: "This software is provided 'as is', without warranty of any kind..."
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProductResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '401':
+          description: Unauthorized. The passed access token is invalid or the user doesn't have access to SaaS Console
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '403':
+          description: Access Denied. User Doesn't have Marketplace User Role (or) User not part of the org which published this solution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '409':
+          description: Resource Conflict. Resource already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+  /products/{productId}:
+    get:
+      tags:
+        - Publishing
+      summary: Retrieve product details by product ID
+      description: |
+        Retrieves comprehensive details of a product from the VCF Solutions Catalog using its unique product identifier.        
+        **Use Cases:**
+        - View complete product information before creating new versions
+        - Check product status and available versions
+        - Retrieve product details for updates or modifications
+
+      operationId: GetProduct
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Unique identifier of the product to retrieve
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProductResponse'
+        '404':
+          description: Resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '401':
+          description: Unauthorized. The passed access token is invalid or the user doesn't have access to SaaS Console
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '403':
+          description: Access Denied. User Doesn't have Marketplace User Role (or) User not part of the org which published this solution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+    patch:
+      tags:
+        - Publishing
+      summary: Update product information
+      description: |
+        Updates product-level information in the VCF Solutions Catalog. This endpoint allows partial updates - only the fields provided in the request will be modified.   
+        
+        **Use Cases:**
+        - Update marketing content or media
+        - Modify support contact information
+        - Add or update technical specifications
+        - Change licensing model
+      operationId: UpdateProduct
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Unique identifier of the product to update
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '401':
+          description: Unauthorized. The passed access token is invalid or the user doesn't have access to SaaS Console
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '403':
+          description: Access Denied. User Doesn't have Marketplace User Role (or) User not part of the org which published this solution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+  /products/{productId}/version:
+    post:
+      tags:
+        - Publishing
+      summary: Create a new version for an existing product
+      description: |
+        Creates a new version for an existing product in the VCF Solutions Catalog. Each version represents a specific release of the product with its own assets, release tags, and compliance information.
+
+      operationId: CreateProductVersion
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Unique identifier of the product to add a version to
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductVersionRequest'
+
+      responses:
+        '201':
+          description: Version created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProductVersionResponse'
+        '404':
+          description: Resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '401':
+          description: Unauthorized. The passed access token is invalid or the user doesn't have access to SaaS Console
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '403':
+          description: Access Denied. With one of following reasons- User Doesn't have Marketplace User Role (or) User not part of the org which published this solution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '409':
+          description: Resource Conflict. Version with the same version number already exists for this product.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+  /products/{productId}/version/{versionNumber}:
+    patch:
+      tags:
+        - Publishing
+      summary: Update version details for a product
+      description: |
+        Updates an existing version of a product in the VCF Solutions Catalog. This endpoint allows partial updates - only the fields provided in the request will be modified.        
+        **Asset Update Behavior:**
+        - **Virtual Machines (OVA/ISO)**: Replacing assets archives the old ones and requires re-validation
+        - **Containers**: New assets replace the existing one
+
+      operationId: UpdateProductVersion
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Unique identifier of the product
+          schema:
+            type: string
+        - name: versionNumber
+          in: path
+          required: true
+          description: Version number to update (e.g., "1.0.0")
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductVersionRequest'
+      responses:
+        '204':
+          description: Update Successful. No Content
+        '404':
+          description: Resource not found. product or version not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+        '401':
+          description: Unauthorized. The passed access token is invalid or the user doesn't have access to SaaS Console
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '403':
+          description: Access Denied.User Doesn't have Marketplace User Role (or) User is not part of the org which published this solution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+
+    get:
+      tags:
+        - Publishing
+      summary: Retrieve detailed information for a specific product version
+      description: |
+        Retrieves comprehensive details of a specific version of a product from the VCF Solutions Catalog.   
+        **Use Cases:**
+        - Review version details before updates
+        - Verify asset URLs and integrity hashes
+        - Check compliance information for regulatory requirements
+
+      operationId: GetProductVersion
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: Unique identifier of the product
+          schema:
+            type: string
+        - name: versionNumber
+          in: path
+          required: true
+          description: Version number to retrieve (e.g., "1.0.0")
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product version details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProductVersionResponse'
+        '404':
+          description: Resource not found. product or version not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+        '401':
+          description: Unauthorized. The passed access token is invalid or the user doesn't have access to SaaS Console
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '403':
+          description: Access Denied.User Doesn't have Marketplace User Role (or) User is not part of the org which published this solution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+
+  /storage-location:
+    get:
+      tags:
+        - Content Upload
+      summary: Get storage location with pre signed folder specs for content upload
+      description: |
+        Retrieves Google Cloud Storage (GCS) resigned folder location for securely uploading content files to the VCF Solutions Catalog using form data
+
+        **Use Case:**
+         It's ideal for applications that need to upload multiple files directly from the client side to a specific folder
+        
+        **Upload Workflow:**
+        1. Call this endpoint to get pre signed folder details
+        2. Use the returned policy fields to construct multipart/form-data POST request
+        4. After successful upload, reference the uploaded file in your product/version API requests
+        5. The policy is temporary and expires after a set duration
+
+        **Example HTML Form Usage:**
+        ```
+         curl -X POST ${response.URL} \
+            -F "key=b850a519-c309-42c9-baa4-4a51bb49ad2b/1771321349/${relace-with-filename-and-ext}" \
+            -F "policy=${response.policy}" \
+            -F "x-goog-algorithm=${response.x-goog-algorithm}" \
+            -F "x-goog-credential=${response.x-goog-credential}" \
+            -F "x-goog-date=${response.x-goog-date}" \
+            -F "x-goog-signature=${response.x-goog-signature}" \
+            -F "file=@path/to/file.ext" 
+
+        ```
+
+      operationId: getStorageLocation
+      responses:
+        '200':
+          description: Storage location with POST policy fields retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetStorageLocationResponse'
+              example:
+                url: "https://storage.googleapis.com/vsc-content-bucket"
+                key: "uploads/org-12345/1234543/my-product-v1.0.0.ova"
+                policy: "eyJleHBpcmF0aW9uIjoiMjAyNi0wMi0..."
+                x-goog-algorithm: "GOOG4-RSA-SHA256"
+                x-goog-credential: "service-account@project.iam.gserviceaccount.com/20260216/auto/storage/goog4_request"
+                x-goog-date: "20260216T120000Z"
+                x-goog-signature: "abcdef123456789..."
+        '401':
+          description: Unauthorized. The passed access token is invalid or the user doesn't have access to SaaS Console
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+        '403':
+          description: Access Denied.User Doesn't have Marketplace User Role (or) User is not part of the org which published this solution.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIErrorResponse'
+
+
+components:
+  schemas:
+    ReleaseTags:
+      type: string
+      enum:
+        - GENERAL_AVAILABILITY
+        - DEVELOPER_RELEASE
+        - ALPHA_RELEASE
+        - BETA_RELEASE
+        - RELEASE_CANDIDATE
+        - MAJOR_RELEASE
+        - MINOR_RELEASE
+        - SECURITY_RELEASE
+        - MAINTENANCE_RELEASE
+
+    License:
+      type: string
+      description: Licensing model that governs how end users may access and use the solution. This refers to the solution's own license terms, independent of any VCF platform licensing.
+      enum:
+        - FREE
+        - BYOL
+        - TRIAL
+        - OPEN_SOURCE
+      x-enum-descriptions:
+        FREE: The solution is available at no cost. No license key or external license agreement is required to use it.
+        BYOL: Bring Your Own License. The publisher provides the solution, but the end user must supply a valid license obtained directly from the publisher or vendor.
+        TRIAL: The solution is available for a limited evaluation period. Users can access full or partial functionality before committing to a paid license.
+        OPEN_SOURCE: The solution is distributed under an open source license (e.g., MIT, Apache 2.0, GPL). Source code is freely available and usage is governed by the respective open source license terms.
+
+    ProductType:
+      type: string
+      description: Type of product being published. DISTRIBUTABLE indicates a product with downloadable artifacts (e.g., OVAs, containers, helm charts). LISTING indicates a product that redirects users to an external location without downloadable artifacts.
+      enum:
+        - DISTRIBUTABLE
+        - LISTING
+
+    OS:
+      type: string
+      description: Operating system types supported by the solution
+      enum:
+        - DEBIAN
+        - I_OS
+        - RASPBERRY_PI
+        - ANDROID
+        - CHROME
+        - SUSE
+        - RHEL
+        - UBUNTU
+        - MAC_OS
+        - CENT_OS
+        - LINUX
+        - UNIX
+        - WINDOWS
+
+    Category:
+      type: string
+      description: Solution category classification
+      enum:
+        - AI_MACHINE_LEARNING
+        - ANALYTICS
+        - BUSINESS_APPLICATION_SERVICES
+        - BUSINESS_TOOLS
+        - COMPUTE
+        - DATABASES
+        - DEVELOPER_TOOLS
+        - DEV_OPS
+        - HARDWARE
+        - IDENTITY
+        - INTERNET_OF_THINGS
+        - MANAGEMENT_AND_MONITORING
+        - NETWORKING
+        - OTHER_CATEGORY
+        - STORAGE
+        - TELCO
+        - FINANCIAL_SERVICES
+
+    VcfComponent:
+      type: string
+      description: VMware Cloud Foundation component compatibility
+      enum:
+        - NSX
+        - OTHER_VCF_COMP
+        - VMWARE_LIVE_RECOVERY
+        - TELCO_CLOUD
+        - VCF_OPERATIONS_FOR_LOGS
+        - VCF_OPERATIONS_FOR_NETWORKS
+        - VSAN
+        - VSPHERE_KUBERNETES_SERVICE
+        - VCF_AUTOMATION
+        - VCF_OPERATIONS
+        - VSPHERE
+
+    ArtifactType:
+      type: string
+      enum:
+        - OVA
+        - ISO
+        - DOCKER
+
+    HashAlgo:
+      type: string
+      enum:
+        - SHA1
+        - SHA256
+        - SHA512
+
+
+    FormFactor:
+      type: string
+      enum:
+        - VIRTUAL_MACHINES
+        - CONTAINERS
+
+    Status:
+      type: string
+      description: Product status in the publishing lifecycle
+      enum:
+        - PENDING
+        - PUBLISHED
+        - ARCHIVED
+        - DELETED
+        - REJECTED
+      x-enum-descriptions:
+        PENDING: "Product is submitted and awaiting review/approval - Keep checking for status update"
+        PUBLISHED: "Product is approved and published in the catalog - No action required"
+        ARCHIVED: "Product is archived by Admin and no longer published - Reach out to VSC Admin"
+        DELETED: "Product has been deleted from the system by Admin - Reach out to VSC Admin"
+        REJECTED: "Product submission was rejected during review - Check review comments or reach out to VSC Admin"
+
+
+    VersionStatus:
+      type: string
+      description: Version status in the publishing lifecycle
+      enum:
+        - VERSION_PENDING
+        - ACTIVE
+        - REJECTED
+      x-enum-descriptions:
+        VERSION_PENDING: "Version is submitted and awaiting review/approval - Keep checking for status update"
+        ACTIVE: "Version is approved and actively available in the catalog - No action required"
+        REJECTED: "Version submission was rejected during review - Check review comments or reach out to VSC Admin"
+
+
+    AssetStatus:
+      type: string
+      description: Status of an asset (VM, container, etc.)
+      enum:
+        - ASSET_INACTIVE
+        - AS_ACTIVE
+        - AS_APPROVAL_PENDING
+      x-enum-descriptions:
+        AS_INACTIVE: "Asset is inactive because of processing error. Likely to be rejected"
+        AS_ACTIVE: "Asset is approved and available for use"
+        AS_APPROVAL_PENDING: "Asset processing is successful, waiting for approval"
+
+    ImageTagType:
+      type: string
+      enum:
+        - FIXED
+        - FLOATING
+
+    GrantType:
+      type: string
+      enum:
+        - CLIENT_CREDENTIALS
+        - API_TOKEN
+
+    TechSpecs:
+      type: object
+      required:
+        - formFactor
+        - artifactType
+        - category
+        - vcfComponentNames
+      properties:
+        formFactor:
+          $ref: '#/components/schemas/FormFactor'
+        artifactType:
+          $ref: '#/components/schemas/ArtifactType'
+        osList:
+          type: array
+          items:
+            $ref: '#/components/schemas/OS'
+          description:  Supported operating systems for your solution.
+        category:
+          $ref: '#/components/schemas/Category'
+        vcfComponentNames:
+          type: array
+          items:
+            $ref: '#/components/schemas/VcfComponent'
+          minItems: 1
+          description: one or more compatible VMware platforms that fit your solution.
+        technicalSummary:
+          type: string
+          description: Add a Technical Summary to provide users with additional technical information for your solution that are more specific than Description and Highlights.
+          maxLength: 2000
+
+    OpenSourceDisclosure:
+      type: object
+      description: Open source software disclosure information including license details and source code package locations
+      properties:
+        licenseDisclosureUrl:
+          type: string
+          format: uri
+          description: URL pointing to the location of the resource. To upload a file use Content Upload API. Once the content upload is successful provide the URL in this field.
+        sourceCodePackageUrl:
+          type: string
+          format: uri
+          description: URL pointing to the location of the source code package
+
+    Resources:
+      type: object
+      required:
+        - name
+        - url
+      properties:
+        name:
+          type: string
+          description: Name or Description for the resource
+        url:
+          type: string
+          format: uri
+          description: URL pointing to the location of the resource. To upload a file use Content Upload API . After the content upload is successful provide the URL in this field.
+      description: Documents that help your users deploy, use, and troubleshoot your solution.
+
+
+    SupportDetails:
+      type: object
+      required:
+        - websiteURL
+        - emailIds
+      properties:
+        websiteURL:
+          type: string
+          format: uri
+          description: URL pointing to the support page of the product.
+        summary:
+          type: string
+          description: Enter a Summary to provide users with additional support information for your solution, such as support hours, documentation links, or support statements.
+          maxLength: 2000
+        emailIds:
+          type: array
+          items:
+            type: string
+            format: email
+          description: Support email addresses
+        phoneNumbers:
+          type: array
+          items:
+            type: string
+          description: Support phone numbers
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Resources'
+
+    VMAssets:
+      type: object
+      description: Virtual Machine assets including OVAs and ISOs with associated security verification details (hash digest and algorithm)
+      required:
+        - assetURL
+      properties:
+        assetURL:
+          type: string
+          format: uri
+          description: |
+            URL pointing to the location of the VM asset (OVA or ISO file). To upload a file use Content Upload API. Once the content upload is successful provide the URL in this field.
+            The content uploaded at the location will be processed and moved to a new location for further reference.
+        hashDigest:
+          type: string
+          description: Hash digest value for asset integrity verification
+          maxLength: 1000
+        hashAlgo:
+          $ref: '#/components/schemas/HashAlgo'
+
+    VMAssetDetails:
+      type: object
+      description: Virtual Machine assets including OVAs and ISOs with associated security verification details (hash digest and algorithm)
+      required:
+        - assetURL
+      properties:
+        assetURL:
+          type: string
+          format: uri
+          description: URL pointing to the location of the VM asset (OVA or ISO file). To upload a file use Content Upload API. Once the content upload is successful provide the URL in this field.
+        hashDigest:
+          type: string
+          description: Hash digest value for asset integrity verification
+          maxLength: 1000
+        hashAlgo:
+          $ref: '#/components/schemas/HashAlgo'
+        status:
+          $ref: '#/components/schemas/AssetStatus'
+
+
+    ImageTag:
+      type: object
+      properties:
+        tag:
+          type: string
+        type:
+          $ref: '#/components/schemas/ImageTagType'
+
+    ContainerAssets:
+      type: object
+      description: |
+        Container asset details for a single container image (aligned with v2/publishing.proto ContainerAssets).
+        Includes repository name, optional upload URL for tar images, image tag, and deployment instructions.
+      required:
+        - repositoryName
+        - imageTag
+      properties:
+        repositoryName:
+          type: string
+          description: "Container repository name. For public repositories, provide the full repository path (e.g., 'bitnami/nginx'). When uploading a tar file via uploadURL, this field specifies the repository name where the image will be stored in VSC's registry."
+        uploadURL:
+          type: string
+          format: uri
+          description: |
+            URL pointing to the location of the resource. To upload a file use Content Upload API. Once the content upload is successful provide the URL in this field. Supported files *.tar.
+            The content uploaded at the location will be processed and moved to a new location for further reference.
+        imageTag:
+          type: string
+          description: Image tag (e.g., version string like '2.1.0' or 'latest')
+        deploymentInstruction:
+          type: string
+          description: Instructions for deploying the container image (e.g., docker pull command)
+
+    UpdateContainerAssetsPayload:
+      type: object
+      description: |
+        Payload for updating container assets (aligned with v2/publishing.proto UpdateContainerAssetsPayload).
+        When refresh is true, repositoryName and imageTag must be omitted; this option is only valid when the version is already approved.
+      properties:
+        repositoryName:
+          type: string
+          description: "Container repository name. Omit when refresh is true."
+        uploadURL:
+          type: string
+          format: uri
+          description: |
+            URL for container image tar upload. Use Content Upload API for *.tar files. Omit when refresh is true.
+        imageTag:
+          type: string
+          description: "Image tag. Omit when refresh is true."
+        deploymentInstruction:
+          type: string
+          description: Instructions for deploying the container image
+        refresh:
+          type: boolean
+          description: |
+            When true, triggers refresh of container asset (e.g., re-pull from registry). Only allowed when the version is already approved.
+            When refresh is enabled, repositoryName and imageTag must not be set.
+
+    MarketingDetails:
+      type: object
+      required:
+        - overview
+        - description
+      properties:
+        overview:
+          type: string
+          description: Summary of the Product to be published in VSC.
+          maxLength: 250
+        description:
+          type: string
+          description: Include detailed information about solution features, attributes, and use-cases in a sentence or bulleted format. Enclosed as a string.
+          maxLength: 10000
+        redirectURL:
+          type: string
+          format: uri
+          description: Used only with Listing only Products
+        featureHighlights:
+          type: array
+          items:
+            type: string
+          description: call out important features or capabilities of the product
+        imageURLs:
+          type: array
+          items:
+            type: string
+          description: URLs pointing to the location of the supporting files like screenshots etc.,
+        videoURLs:
+          type: array
+          items:
+            type: string
+          description: Suported formats include .mov, .3gp, .mp4 and any youtube URLs
+
+    EncryptionDetails:
+      type: object
+      description: Encryption capabilities and functionalities present in the product.
+      required:
+        - supportsEncryption
+      properties:
+        supportsEncryption:
+          type: boolean
+          description: Indicates whether the product contains encryption functionalities or capabilities
+        encryptionTypes:
+          type: array
+          description: Types of encryption capabilities present in the product. Required if supportsEncryption is true.
+          items:
+            $ref: '#/components/schemas/EncryptionTypes'
+          minItems: 1
+        supportsNonStandardEncryption:
+          type: boolean
+          description: Indicates whether the product uses non-standard encryption algorithms or methods
+        othersDescription:
+          type: string
+          description: Description of other encryption capabilities (required if 'OTHER_ENCRYPTION' is selected in encryptionTypes)
+
+    ExportCompliance:
+      type: object
+      description: U.S. export control compliance information including ECCN classification, HTS codes, license exceptions, and CCATS documentation for products with encryption or controlled technology
+      required:
+        - eccnDetails
+        - htsDetails
+        - licenseException
+      properties:
+        eccnDetails:
+          $ref: '#/components/schemas/EccnDetails'
+        htsDetails:
+          $ref: '#/components/schemas/HTSDetails'
+        licenseException:
+          $ref: '#/components/schemas/LicenseException'
+        ccatsNumber:
+          type: string
+          description: Commodity Classification Automated Tracking System (CCATS) number if applicable (issued by BIS for encryption products)
+        ccatsDocumentUrl:
+          type: string
+          format: uri
+          description: URL pointing to the location of the CCATS document. To upload a file use Content Upload API. After the content upload is successful provide the URL in this field.
+
+
+    EccnDetails:
+      type: object
+      description: Export Control Classification Number (ECCN) details for products subject to U.S. export controls
+      properties:
+        eccn:
+          $ref: '#/components/schemas/ECCN'
+        other:
+          type: string
+          description: Custom ECCN value (required if ECCN is "ECCN_OTHER")
+      required:
+        - eccn
+
+    HTSDetails:
+      type: object
+      description: Harmonized Tariff Schedule (HTS) classification details for customs and import/export purposes
+      properties:
+        htsApplicable:
+          type: boolean
+          description: Indicates if HTS classification is applicable for this product
+        hts:
+          type: string
+          description: "Harmonized Tariff Schedule code (required if htsApplicable = true)"
+      required:
+        - htsApplicable
+
+    LicenseException:
+      type: string
+      description: License Exception type
+      enum:
+        - ENC_RESTRICTED
+        - ENC_UNRESTRICTED
+        - TSU_UNRESTRICTED
+        - NLR
+      x-enum-descriptions:
+        ENC_RESTRICTED: "Restricted encryption license exception"
+        ENC_UNRESTRICTED: "Unrestricted encryption license exception"
+        TSU_UNRESTRICTED: "Technology and Software Unrestricted"
+        NLR: "No License Required"
+
+    EncryptionTypes:
+      type: string
+      description: Supported Encryption Options
+      enum:
+        - USER_AUTHENTICATION
+        - CONTENT_PROTECTION
+        - SECURITY_COMMUNICATION_PROTOCOLS
+        - SECURING_DATA_AT_REST
+        - INTENDED_AS_NETWORK_INFRA
+        - NON_STANDARD_ENCRYPTION
+        - OTHER_ENCRYPTION
+      x-enum-descriptions:
+        USER_AUTHENTICATION: "Product uses encryption for user authentication"
+        CONTENT_PROTECTION: "Product uses encryption for content protection"
+        SECURITY_COMMUNICATION_PROTOCOLS: "Product uses secure communication protocols (e.g., TLS, SSL)"
+        SECURING_DATA_AT_REST: "Product uses encryption for data at rest"
+        INTENDED_AS_NETWORK_INFRA: "Product is intended as network infrastructure with encryption capabilities"
+        NON_STANDARD_ENCRYPTION: "Product uses non-standard encryption algorithms or methods"
+        OTHER_ENCRYPTION: "Product has other encryption capabilities not listed above"
+
+
+    ECCN:
+      type: string
+      description: "ECCN - Export Control Classification Number (ECCN). The Export Control Classification Number consists of a set of digits and a letter."
+      enum:
+        - ECCN_5D992c
+        - ECCN_EAR99
+        - ECCN_5D002c
+        - ECCN_OTHER
+      x-enum-descriptions:
+        ECCN_5D992c: "5D992.c"
+        ECCN_EAR99: "EAR99"
+        ECCN_5D002c: "5D002c.1(b)(1) and (b)(3)"
+        ECCN_OTHER: "Other (specify under 'other' field)"
+
+
+    EulaDetails:
+      type: object
+      description: |
+        End User License Agreement (EULA) details. Provide either a URL to the EULA document or the full EULA text. These fields are mutually exclusive - provide only one.
+      properties:
+        url:
+          type: string
+          format: uri
+          description: |
+            URL pointing to the location of the EULA document. To upload a file use Content Upload API. Once the content upload is successful, provide the URL in this field. (Mutually exclusive with 'text')
+            The content uploaded at the location will be processed and moved to a new location for further reference.
+        text:
+          type: string
+          description: Full text content of the EULA (Mutually exclusive with 'url')
+      minProperties: 1
+      maxProperties: 1
+
+    Compliance:
+      type: object
+      description: Comprehensive trade compliance information including encryption details, export controls (ECCN, HTS), license exceptions, EULA, and open source disclosures required for product distribution
+      required:
+        - encryptionDetails
+        - exportCompliance
+        - eulaDetails
+      properties:
+        encryptionDetails:
+          $ref: '#/components/schemas/EncryptionDetails'
+        exportCompliance:
+          $ref: '#/components/schemas/ExportCompliance'
+        openSourceDisclosure:
+          $ref: '#/components/schemas/OpenSourceDisclosure'
+        eulaDetails:
+          $ref: '#/components/schemas/EulaDetails'
+
+    VersionSummary:
+      type: object
+      required:
+        - versionNumber
+        - releaseTag
+        - assetDetails
+        - compliance
+      properties:
+        versionNumber:
+          type: string
+          maxLength: 20
+        releaseTag:
+          $ref: '#/components/schemas/ReleaseTags'
+        assetDetails:
+          oneOf:
+            - $ref: '#/components/schemas/VMAssets'
+            - $ref: '#/components/schemas/ContainerAssets'
+        compliance:
+          $ref: '#/components/schemas/Compliance'
+
+    VersionDetails:
+      type: object
+      required:
+        - versionNumber
+        - releaseTag
+        - assetDetails
+        - compliance
+      properties:
+        versionNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/VersionStatus'
+        reviewComments:
+          type: string
+        releaseTag:
+          $ref: '#/components/schemas/ReleaseTags'
+        assetDetails:
+          oneOf:
+            - $ref: '#/components/schemas/VMAssetDetails'
+            - $ref: '#/components/schemas/ContainerAssets'
+        compliance:
+          $ref: '#/components/schemas/Compliance'
+
+    Product:
+      type: object
+      required:
+        - displayName
+        - logoURL
+        - productType
+        - marketingDetails
+        - supportDetails
+        - techSpecs
+        - solutionLicense
+        - version
+      properties:
+        displayName:
+          type: string
+          description: Title of the product to be published in VSC
+          maxLength: 150
+        logoURL:
+          type: string
+          format: uri
+          description: URL pointing to the location of the resource. To upload a file, use Content Upload API . After the content upload is successful provide the URL in this field.. Supported formats .png,.jpeg.,.svg with a recommended resolution of 150*150.
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        marketingDetails:
+          $ref: '#/components/schemas/MarketingDetails'
+        supportDetails:
+          $ref: '#/components/schemas/SupportDetails'
+        techSpecs:
+          $ref: '#/components/schemas/TechSpecs'
+        solutionLicense:
+          $ref: '#/components/schemas/License'
+        version:
+          $ref: '#/components/schemas/VersionSummary'
+
+    CreateProductRequest:
+      type: object
+      properties:
+        product:
+          $ref: '#/components/schemas/Product'
+
+
+    CreateProductResponse:
+      type: object
+      properties:
+        productId:
+          type: string
+
+    ProductSummary:
+      type: object
+      description: Summary information for a product in list view
+      properties:
+        productId:
+          type: string
+          description: Unique identifier of the product
+        displayName:
+          type: string
+          description: Title of the product
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        status:
+          $ref: '#/components/schemas/Status'
+        solutionLicense:
+          $ref: '#/components/schemas/License'
+
+    ListProductsResponse:
+      type: object
+      description: Response containing a list of products with pagination information
+      properties:
+        products:
+          type: array
+          description: Array of product summaries
+          items:
+            $ref: '#/components/schemas/ProductSummary'
+        totalCount:
+          type: integer
+          description: Total number of products matching the filter criteria
+        limit:
+          type: integer
+          description: Maximum number of products returned in this response
+        offset:
+          type: integer
+          description: Number of products skipped
+
+    CreateProductVersionResponse:
+      type: object
+      properties:
+        productId:
+          type: string
+        versionNumber:
+          type: string
+
+    GetProductResponse:
+      type: object
+      properties:
+        product:
+          $ref: '#/components/schemas/ProductDetails'
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        product:
+          $ref: '#/components/schemas/ProductUpdatePayload'
+
+    CreateProductVersionRequest:
+      type: object
+      properties:
+        version:
+          $ref: '#/components/schemas/VersionSummary'
+
+    MarketingUpdatePayload:
+      type: object
+      description: Marketing information update payload for product modifications
+      properties:
+        overview:
+          type: string
+          description: Summary of the Product to be published in VSC
+          maxLength: 250
+        description:
+          type: string
+          description: Include detailed information about solution features, attributes, and use-cases in a sentence or bulleted format
+          maxLength: 10000
+        redirectURL:
+          type: string
+          format: uri
+          description: Used only with Listing only Products
+        featureHighlights:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+          description: To call out important features or capabilities of the product
+        imageURLs:
+          type: array
+          items:
+            type: string
+          description: URLs pointing the location of the supporting files like screenshots etc.
+        videoURLs:
+          type: array
+          items:
+            type: string
+          description: Supported formats include .mov, .3gp, .mp4 and any youtube URLs
+
+    SupportUpdatePayload:
+      type: object
+      description: Support information update payload for product modifications
+      properties:
+        websiteURL:
+          type: string
+          format: uri
+          description: URL pointing the support page of the product
+        summary:
+          type: string
+          description: Enter a Summary to provide users with additional support information for your solution, such as support hours, documentation links, or support statements
+          maxLength: 2000
+        emailIds:
+          type: array
+          items:
+            type: string
+            format: email
+          description: Support email addresses
+        phoneNumbers:
+          type: array
+          items:
+            type: string
+          description: Support phone numbers
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Resources'
+          description: Support resources and documentation
+
+    TechSpecUpdatePayload:
+      type: object
+      description: Technical specifications update payload for product modifications
+      properties:
+        osList:
+          type: array
+          items:
+            $ref: '#/components/schemas/OS'
+          description: Applicable operating systems for your solution
+        category:
+          $ref: '#/components/schemas/Category'
+        vcfComponentNames:
+          type: array
+          items:
+            $ref: '#/components/schemas/VcfComponent'
+          description: One or more compatible VMware platforms that fit your solution
+        technicalSummary:
+          type: string
+          description: Technical Summary to provide users with additional technical information for your solution
+          maxLength: 2000
+
+    ProductUpdatePayload:
+      type: object
+      description: Payload for updating product details including marketing, support, technical specifications, and licensing information
+      properties:
+        displayName:
+          type: string
+          description: Title of the product to be published in VSC
+          maxLength: 150
+        logoURL:
+          type: string
+          format: uri
+          description: URL Pointing to the location of the Logo. Supported formats .png,.jpeg.,.svg with a recommended resolution of 150*150
+        marketingDetails:
+          $ref: '#/components/schemas/MarketingUpdatePayload'
+        supportDetails:
+          $ref: '#/components/schemas/SupportUpdatePayload'
+        techSpecs:
+          $ref: '#/components/schemas/TechSpecUpdatePayload'
+        license:
+          $ref: '#/components/schemas/License'
+
+
+    ComplianceUpdatePayload:
+      type: object
+      description: Compliance information update payload for version modifications
+      properties:
+        encryptionDetails:
+          $ref: '#/components/schemas/EncryptionDetails'
+        exportCompliance:
+          $ref: '#/components/schemas/ExportCompliance'
+        openSourceDisclosure:
+          $ref: '#/components/schemas/OpenSourceDisclosure'
+        eulaDetails:
+          $ref: '#/components/schemas/EulaDetails'
+
+    UpdateVersionPayload:
+      type: object
+      description: |
+        Payload for updating version details (aligned with v2/publishing.proto UpdateVersionPayload).
+        Version number is immutable. For VMs - existing assets are archived and new assets are reviewed. For Containers - use UpdateContainerAssetsPayload (e.g., new assets or refresh).
+      properties:
+        releaseTag:
+          $ref: '#/components/schemas/ReleaseTags'
+        assetDetails:
+          oneOf:
+            - $ref: '#/components/schemas/VMAssets'
+            - $ref: '#/components/schemas/UpdateContainerAssetsPayload'
+        compliance:
+          $ref: '#/components/schemas/ComplianceUpdatePayload'
+
+    UpdateProductVersionRequest:
+      type: object
+      description: Request to update a product version
+      required:
+        - version
+      properties:
+        version:
+          $ref: '#/components/schemas/UpdateVersionPayload'
+
+    GetProductVersionResponse:
+      type: object
+      properties:
+        version:
+          $ref: '#/components/schemas/VersionDetails'
+
+
+    ProductDetails:
+      type: object
+      properties:
+        displayName:
+          type: string
+        logoURL:
+          type: string
+          format: uri
+        productType:
+          $ref: '#/components/schemas/ProductType'
+        status:
+          $ref: '#/components/schemas/Status'
+        reviewComments:
+          type: string
+        marketingDetails:
+          $ref: '#/components/schemas/MarketingDetails'
+        supportDetails:
+          $ref: '#/components/schemas/SupportDetails'
+        techSpecs:
+          $ref: '#/components/schemas/TechSpecs'
+        license:
+          $ref: '#/components/schemas/License'
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Version'
+
+
+    Version:
+      type: object
+      properties:
+        versionNumber:
+          type: string
+        status:
+          $ref: '#/components/schemas/VersionStatus'
+
+
+    StorageSpecs:
+      type: object
+      description: GCS POST policy fields for browser-based uploads
+      properties:
+        url:
+          type: string
+          description: The GCS bucket URL where the POST request should be sent
+          example: "https://storage.googleapis.com/vsc-content-bucket"
+        key:
+          type: string
+          description: The object key (path) where the file will be stored in the bucket. The file name placeholder has to be replaced with the file name to be uploaded
+          example: "uploads/org-12345/${filename}"
+        policy:
+          type: string
+          description: Base64-encoded policy document that defines upload conditions and expiration
+          example: "eyJleHBpcmF0aW9uIjoiMjAyNi0wMi0xNlQxMzowMDowMFoiLCJjb25kaXRpb25zIjpbeyJidWNrZXQiOiJ2c2MtY29udGVudC1idWNrZXQifV19"
+        x-goog-algorithm:
+          type: string
+          description: The signing algorithm used (GOOG4-RSA-SHA256)
+          example: "GOOG4-RSA-SHA256"
+        x-goog-credential:
+          type: string
+          description: The credential scope for the signature
+          example: "service-account@project.iam.gserviceaccount.com/20260216/auto/storage/goog4_request"
+        x-goog-date:
+          type: string
+          description: The date and time when the policy was created (ISO 8601 format)
+          example: "20260216T120000Z"
+        x-goog-signature:
+          type: string
+          description: The cryptographic signature of the policy document
+          example: "abcdef123456789..."
+      required:
+        - url
+        - key
+        - policy
+        - x-goog-algorithm
+        - x-goog-credential
+        - x-goog-date
+        - x-goog-signature
+
+    GetStorageLocationResponse:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/StorageSpecs'
+      description: Map of filename to POST policy fields for uploading content to GCS
+
+    ClientCredentials:
+      type: object
+      properties:
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+
+
+    AuthRequestByClientCredentials:
+      type: object
+      properties:
+        grantType:
+          $ref: '#/components/schemas/GrantType'
+        credentials:
+          $ref: '#/components/schemas/ClientCredentials'
+
+    AuthRequestByAPIToken:
+      type: object
+      properties:
+        grantType:
+          $ref: '#/components/schemas/GrantType'
+        apiToken:
+          type: string
+
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+
+    APIErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        statusCode:
+          type: integer
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Bearer token authentication using JWT access token obtained from the /auth endpoint.
+      x-scopes:
+        - marketplace:user
+
+security:
+  - BearerAuth:
+      - marketplace:user
+
+tags:
+  - name: Authentication
+    description: |
+      Authentication operations for accessing the VCF Solutions Catalog API.
+  - name: Publishing
+    description: |
+      Product and version management operations for publishing solutions to the VCF Solutions Catalog. To enable publish permissions for an organisation, Ref: <ref link>
+  - name: Content Upload
+    description: |
+      Content upload operations for securely uploading files to Google Cloud Storage.

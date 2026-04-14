@@ -1,0 +1,533 @@
+{
+  "name": "Third Party Publishing APIs",
+  "version": "1",
+  "items": [
+    {
+      "type": "http",
+      "name": "Token Generation With oAuth App",
+      "filename": "Token Generation With oAuth App.bru",
+      "seq": 2,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{auth-host}}/auth",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "// For CLIENT CREDENTIALS\n{\n  \"grant_type\":\"CLIENT_CREDENTIALS\",\n  \"credentials\":{\n    \"clientId\":\"3c6f3c05-afa5-42dd-9e85-94fcbe89f48d\",\n    \"clientSecret\":\"46c9bf84-dd60-49d3-bc68-04fea25f3b84\"\n  }\n}",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {
+          "res": "const responseJson = res.body;\n// Check if the token exists in the response\nif (responseJson && responseJson.accessToken) {\n  // Create a temporary runtime variable (available for subsequent requests in the run)\n  bru.setVar('accessToken', responseJson.accessToken);\n  \n  // Create or update an environment variable (specific to the selected environment)\n  // Use { persist: true } if you want the value to be saved to the environment file\n  bru.setEnvVar('accessToken', responseJson.accessToken);\n  \n  console.log('Access token stored successfully!');\n} else {\n  console.log('Access token not found in the response.');\n}"
+        },
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "inherit"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Create a VM Listing",
+      "filename": "Create a VM Listing.bru",
+      "seq": 5,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "",
+            "value": "",
+            "enabled": false
+          }
+        ],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"product\":{\n    \"displayName\":\"Display Name for a Virtual Machine\",\n    \"logoURL\":\"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/media-files/1744561193164/logo_1.png\",\n    \"productType\":\"DISTRIBUTABLE\",\n    \"marketingDetails\":{\n      \"overview\":\"overview goes here\",\n      \"description\":\"description goes here\" ,\n            \"imageURLs\": [\n            \"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/media-files/1744561206246/logo_2.png\"\n        ],\n        \"videoURLs\": [\n            \"https://youtu.be/yv0zs3ldWns?si=7HUKkgdvr7mXTw4-\",\n            \"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/media-files/1744561212343/video.mp4\"\n        ]\n    },\n    \"supportDetails\":{\n      \"websiteURL\":\"http://abc.com\",\n      \"emailIds\":[\"test@123.com\", \"test@234.com\"],\n      \"resources\":[\n        {\n            \"name\": \"Automation\",\n            \"url\": \"https://broadcom.com\"\n        },\n        {\n            \"name\": \"Sonar\",\n            \"url\": \"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/marketplace-product-files/1744561250378/document.pdf\"\n        }\n\n      ]\n    },\n    \"techSpecs\":{\n      \"formFactor\":\"VIRTUAL_MACHINES\",\n      \"artifactType\":\"OVA\",\n      \"osList\":[\"DEBIAN\",\"ANDROID\"],\n      \"category\":\"ANALYTICS\",\n      \"vcfComponents\":[\"VCF_OPERATIONS\"]\n    },\n    \"solutionLicense\":\"FREE\",\n    \"version\":{\n      \"versionNumber\":\"1.0\",\n      \"releaseTag\":\"GENERAL_AVAILABILITY\",\n      \"vmAssets\": {\n          \"assetURL\":\"https://cloud-images.ubuntu.com/noble/20260131/noble-server-cloudimg-amd64.ova\"\n        },\n      \"compliance\": {\n        \"encryptionDetails\":{\n          \"supportsNonStandardEncryption\":true,\n          \"supportsEncryption\":true,\n          \"encryptionTypes\":[\"SECURITY_COMMUNICATION_PROTOCOLS\"]\n        },\n        \"exportCompliance\":{\n          \"eccnDetails\":{\n            \"eccn\":\"ECCN_5D992C\"\n          },\n          \"htsDetails\":{\n            \"htsApplicable\":false\n          },\n          \"licenseException\": \"NLR\"\n        },\n          \"eulaDetails\": {\n              \"text\":\"EULA Content goes here\"\n          }\n      }\n    }\n  }\n}",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Update a product",
+      "filename": "Update a product.bru",
+      "seq": 7,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products/9f3c4fe2-d06d-41c6-b8c7-5632da198398",
+        "method": "PATCH",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"product\":{\n    \"techSpecs\":{\n      \"vcfComponents\":[\"VCF_OPERATIONS\",\"VSPHERE\"]\n    }\n  }\n}",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Update a product version",
+      "filename": "Update a product version.bru",
+      "seq": 8,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products/613033f6-33af-44f7-b8b2-c8bf86d11d03/versions/1.0",
+        "method": "PATCH",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"version\": {\n    \"vmAssets\": {\n      \"assetURL\": \"https://cloud-images.ubuntu.com/noble/20251113/noble-server-cloudimg-amd64.ova\"\n    }\n  }\n}\n\n\n\n\n\n\n\n// EULA\n// {\n//   \"version\":{\n//     \"compliance\": {\n//         \"encryptionDetails\":{\n//           \"nonStandardEncryption\":true,\n//           \"noEncryption\":true\n//         },\n//         \"exportCompliance\":{\n//           \"eccnDetails\":{\n//             \"eccn\":\"ECCN_5D002C\"\n//           },\n//           \"htsDetails\":{\n//             \"htsApplicable\":false\n//           },\n//           \"licenseException\": \"NLR\"\n//         },\n//         \"eulaDetails\": {\n//             \"text\":\"Hello eula is updated\"\n//         }\n//       }\n//   }\n// }\n// change only compliance combinations\n// {\n//   \"version\":{\n//     \"compliance\": {\n//         \"encryptionDetails\":{\n//           \"nonStandardEncryption\":true,\n//           \"noEncryption\":true\n//         },\n//         \"exportCompliance\":{\n//           \"eccnDetails\":{\n//             \"eccn\":\"ECCN_5D002C\"\n//           },\n//           \"htsDetails\":{\n//             \"htsApplicable\":false\n//           },\n//           \"licenseException\": \"NLR\"\n//         }\n//       }\n//   }\n// }\n// Update Encryption Details\n// {\n//   \"version\":{\n//     \"releaseTag\":\"ALPHA_RELEASE\",\n//     \"compliance\":{\n//       \"encryptionDetails\":{\n//           \"nonStandardEncryption\":true,\n//           \"securingDataAtRest\":true\n//         }\n//     }\n//   }\n// }\n// Update Release Tag\n// {\n//   \"version\":{\n//     \"releaseTag\":\"DEVELOPER_RELEASE\"\n//   }\n// }\n// {\n//   \"version\":{\n//       \"versionNumber\":\"4.0\",\n//       \"releaseTag\":\"GENERAL_AVAILABILITY\",\n//       \"vmAssets\": {\n//           \"assetURL\":\"https://cloud-images.ubuntu.com/noble/20251113/noble-server-cloudimg-amd64.ova\"\n//         },\n//       \"sbom\":\"https://dyltqmyl993wv.cloudfront.net/assets/stacks/bitnami/img/bitnami-stack-220x234.png\",\n//       \"compliance\": {\n//         \"encryptionDetails\":{\n//           \"nonStandardEncryption\":true,\n//           \"noEncryption\":true\n//         },\n//         \"exportCompliance\":{\n//           \"eccnDetails\":{\n//             \"eccn\":\"ECCN_EAR99\"\n//           },\n//           \"htsDetails\":{\n//             \"htsApplicable\":false\n//           },\n//           \"licenseException\": \"NLR\"\n//         },\n//           \"eulaDetails\": {\n//               \"text\":\"test eula\"\n//           }\n//       }\n//     }\n// }",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Create a container solution",
+      "filename": "Create a container solution.bru",
+      "seq": 9,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "",
+            "value": "",
+            "enabled": false
+          }
+        ],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"product\":{\n    \"displayName\":\"display name goes here\",\n    \"logoURL\":\"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/media-files/1744561193164/logo_1.png\",\n    \"productType\":\"DISTRIBUTABLE\",\n    \"marketingDetails\":{\n      \"overview\":\"test-overview\",\n      \"description\":\"test-description\" ,\n            \"imageURLs\": [\n            \"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/media-files/1744561206246/logo_2.png\"\n        ],\n        \"videoURLs\": [\n            \"https://youtu.be/yv0zs3ldWns?si=7HUKkgdvr7mXTw4-\",\n            \"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/media-files/1744561212343/video.mp4\"\n        ]\n    },\n    \"supportDetails\":{\n      \"websiteURL\":\"http://abc.com\",\n      \"emailIds\":[\"test@123.com\", \"test@234.com\"],\n      \"resources\":[\n        {\n            \"name\": \"Automation\",\n            \"url\": \"https://broadcom.com\"\n        },\n        {\n            \"name\": \"Sonar\",\n            \"url\": \"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/marketplace-product-files/1744561250378/document.pdf\"\n        }\n\n      ]\n    },\n    \"techSpecs\":{\n      \"formFactor\":\"CONTAINERS\",\n      \"artifactType\":\"DOCKER\",\n      \"osList\":[\"DEBIAN\",\"ANDROID\"],\n      \"category\":\"ANALYTICS\",\n      \"vcfComponents\":[\"VCF_OPERATIONS\"]\n    },\n    \"solutionLicense\":\"FREE\",\n    \"version\":{\n      \"versionNumber\":\"1.0\",\n      \"releaseTag\":\"GENERAL_AVAILABILITY\",\n      \"containerAssets\":{\n        \"repositoryName\":\"bitnami/wordpress\",\n        \"uploadURL\":\"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/marketplace-product-files/1744561325672/wordpress.tar\",\n        \"imageTag\":\"latest\",\n        \"deploymentInstruction\":\"<p>test instructions</p>\"\n      },\n      \"compliance\": {\n        \"encryptionDetails\":{\n          \"supportsNonStandardEncryption\":true,\n          \"supportsEncryption\":true,\n          \"encryptionTypes\":[\"SECURITY_COMMUNICATION_PROTOCOLS\"]\n        },\n        \"exportCompliance\":{\n          \"eccnDetails\":{\n            \"eccn\":\"ECCN_5D992C\"\n          },\n          \"htsDetails\":{\n            \"htsApplicable\":false\n          },\n          \"licenseException\": \"NLR\"\n        },\n          \"eulaDetails\": {\n              \"text\":\"test eula\"\n          }\n      }\n    }\n  }\n}\n\n\n\n\n\n// By Public URLs\n// {\n//   \"product\":{\n//     \"displayName\":\"test-v2-container-01\",\n//     \"logoURL\":\"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/media-files/1744561193164/logo_1.png\",\n//     \"productType\":\"DISTRIBUTABLE\",\n//     \"marketingDetails\":{\n//       \"overview\":\"test-overview\",\n//       \"description\":\"test-description\" ,\n//             \"imageURLs\": [\n//             \"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/media-files/1744561206246/logo_2.png\"\n//         ],\n//         \"videoURLs\": [\n//             \"https://youtu.be/yv0zs3ldWns?si=7HUKkgdvr7mXTw4-\",\n//             \"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/media-files/1744561212343/video.mp4\"\n//         ]\n//     },\n//     \"supportDetails\":{\n//       \"websiteURL\":\"http://abc.com\",\n//       \"emailIds\":[\"test@123.com\", \"test@234.com\"],\n//       \"resources\":[\n//         {\n//             \"name\": \"Automation\",\n//             \"url\": \"https://broadcom.com\"\n//         },\n//         {\n//             \"name\": \"Sonar\",\n//             \"url\": \"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/marketplace-product-files/1744561250378/document.pdf\"\n//         }\n\n//       ]\n//     },\n//     \"techSpecs\":{\n//       \"formFactor\":\"CONTAINERS\",\n//       \"artifactType\":\"DOCKER\",\n//       \"osList\":[\"DEBIAN\",\"ANDROID\"],\n//       \"category\":\"ANALYTICS\",\n//       \"vcfComponents\":[\"VCF_OPERATIONS\"]\n//     },\n//     \"solutionLicense\":\"FREE\",\n//     \"version\":{\n//       \"versionNumber\":\"1.0\",\n//       \"releaseTag\":\"GENERAL_AVAILABILITY\",\n//       \"containerAssets\":{\n//         \"repositoryName\":\"bitnami/nginx\",\n//         \"imageTag\":\"latest\",\n//         \"deploymentInstruction\":\"<p>test instructions</p>\"\n//       },\n//       \"compliance\": {\n//         \"encryptionDetails\":{\n//           \"supportsNonStandardEncryption\":true,\n//           \"supportsEncryption\":true,\n//           \"encryptionTypes\":[\"SECURITY_COMMUNICATION_PROTOCOLS\"]\n//         },\n//         \"exportCompliance\":{\n//           \"eccnDetails\":{\n//             \"eccn\":\"ECCN_5D992C\"\n//           },\n//           \"htsDetails\":{\n//             \"htsApplicable\":false\n//           },\n//           \"licenseException\": \"NLR\"\n//         },\n//           \"eulaDetails\": {\n//               \"text\":\"test eula\"\n//           }\n//       }\n//     }\n//   }\n// }",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Add a new version to the container",
+      "filename": "Add a new version to the container.bru",
+      "seq": 10,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products/9f3c4fe2-d06d-41c6-b8c7-5632da198398/versions",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "",
+            "value": "",
+            "enabled": false
+          }
+        ],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"version\": {\n    \"versionNumber\": \"2.0\",\n    \"releaseTag\": \"GENERAL_AVAILABILITY\",\n    \"containerAssets\": {\n      \"repositoryName\": \"bitnami/nginx\",\n      \"imageTag\": \"latest-metadata\",\n      \"deploymentInstruction\": \"<p>test instructions</p>\"\n    },\n    \"compliance\": {\n      \"encryptionDetails\": {\n        \"supportsNonStandardEncryption\": true,\n        \"supportsEncryption\": true,\n        \"encryptionTypes\": [\n          \"SECURITY_COMMUNICATION_PROTOCOLS\"\n        ]\n      },\n      \"exportCompliance\": {\n        \"eccnDetails\": {\n          \"eccn\": \"ECCN_5D992C\"\n        },\n        \"htsDetails\": {\n          \"htsApplicable\": false\n        },\n        \"licenseException\": \"NLR\"\n      },\n      \"eulaDetails\": {\n        \"text\": \"test eula\"\n      }\n    }\n  }\n}",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Get Storage Location",
+      "filename": "Get Storage Location.bru",
+      "seq": 4,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/storage-location",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Token Generation With API Token",
+      "filename": "Token Generation With API Token.bru",
+      "seq": 3,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{auth-host}}/auth",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"grant_type\":\"API_TOKEN\",\n  \"apiToken\":\"wcMBOydqXkYZYIVh0Jfy_bboQJY3DNZM47V8Nl0dboXzxz6PDZB_zuIam-QbUbQG\"\n}",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {
+          "res": "const responseJson = res.body;\n// Check if the token exists in the response\nif (responseJson && responseJson.accessToken) {\n  // Create a temporary runtime variable (available for subsequent requests in the run)\n  bru.setVar('accessToken', responseJson.accessToken);\n  \n  // Create or update an environment variable (specific to the selected environment)\n  // Use { persist: true } if you want the value to be saved to the environment file\n  bru.setEnvVar('accessToken', responseJson.accessToken);\n  \n  console.log('Access token stored successfully!');\n} else {\n  console.log('Access token not found in the response.');\n}"
+        },
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "inherit"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Add a new version to an existing VM",
+      "filename": "Add a new version to an existing VM.bru",
+      "seq": 6,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products/{product-id}/versions",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n    \"version\":{\n      \"versionNumber\":\"2.0\",\n      \"releaseTag\":\"GENERAL_AVAILABILITY\",\n      \"vmAssets\": {\n          \"assetURL\":\"https://storage.googleapis.com/vmarketplacedev/b850a519-c309-42c9-baa4-4a51bb49ad2b/marketplace-product-files/1744561325672/yvme_2.ova\"\n        },\n      \"sbom\":\"https://dyltqmyl993wv.cloudfront.net/assets/stacks/bitnami/img/bitnami-stack-220x234.png\",\n      \"compliance\": {\n        \"encryptionDetails\":{\n          \"nonStandardEncryption\":true,\n          \"noEncryption\":true\n        },\n        \"exportCompliance\":{\n          \"eccnDetails\":{\n            \"eccn\":\"ECCN_EAR99\"\n          },\n          \"htsDetails\":{\n            \"htsApplicable\":false\n          },\n          \"licenseException\": \"NLR\"\n        },\n          \"eulaDetails\": {\n              \"text\":\"test eula\"\n          }\n      }\n    }\n}",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "eyJ4NXQjUzI1NiI6IlJjdGtZRUI1VjlzTDZWSkF0MDBEMl9LZFdWdXpSaG96NDJDSHczNW9NMjAiLCJ4NXQiOiJ5eVBjNllrcTQxbHFDQkdyX0xvb19UR2ppeE0iLCJraWQiOiJzc3Atc2lnbmluZ2tleSIsInR5cCI6IkpXVCIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiI6M2M2ZjNjMDUtYWZhNS00MmRkLTllODUtOTRmY2JlODlmNDhkIiwiaXNzIjoiaHR0cHM6Ly9jb25zb2xlLXN0Zy5jbG91ZC52bXdhcmUuY29tIiwiY29udGV4dF9uYW1lIjoiYjg1MGE1MTktYzMwOS00MmM5LWJhYTQtNGE1MWJiNDlhZDJiIiwidGlkIjoiMGYyZjI3NDgtZTEyMC00YzA3LWFmNTItMDBiM2M2MzM3OWYxIiwidHJhbnNhY3Rpb25pZCI6ImU0ZTUxNWZjLTZiZmYtNDc2MC05MGNiLWU3YzQxYjk4MzhlZiIsInN1Yl90eXBlIjoiQ0xJRU5UIiwiYXpwIjoiM2M2ZjNjMDUtYWZhNS00MmRkLTllODUtOTRmY2JlODlmNDhkIiwic2NvcGUiOiIiLCJjb250ZXh0IjoiN2U3NjNhYzMtYzRjNC00ZjUzLWIzZDItNjdiNTg1YjlmNWU5IiwicGVybXMiOlsiY3NwOm9yZ19tZW1iZXIiLCJleHRlcm5hbC9hZDhiMjg2Ny1hM2UxLTQwYzAtYTQ5Zi1kY2ZlMTE5NzMzZDAvc3J2LW1hcmtldHBsYWNlOm1hcmtldHBsYWNldXNlciJdLCJleHAiOjE3Njk1MDQzMjksImlhdCI6MTc2OTUwMjUyOSwiY2xpZW50X25hbWUiOiJTQUFTX0NvbmZpZGVudGlhbF9DbGllbnRDcmVkcyIsImp0aSI6IjE1YjM4MDBjLTUwMGEtNDFiMS05NzVkLWVjMDQxNDExYmY1NSIsImNsaWVudF90bmFtZSI6ImRlZmF1bHQiLCJjbGllbnRfdGlkIjoiMGYyZjI3NDgtZTEyMC00YzA3LWFmNTItMDBiM2M2MzM3OWYxIiwidmVyIjoiMS4wIiwiYXpwYWNyIjoiMSIsInRuYW1lIjoiZGVmYXVsdCIsInRva190eXBlIjoiQVQiLCJhdWQiOiJodHRwczovL2NvbnNvbGUtc3RnLmNsb3VkLnZtd2FyZS5jb20iLCJuYmYiOjE3Njk1MDI1MjksImNsaWVudF90cmFuc2FjdGlvbmlkIjoic3NwOmU0ZTUxNWZjLTZiZmYtNDc2MC05MGNiLWU3YzQxYjk4MzhlZiIsImF1dGhvcml6YXRpb25fZGV0YWlscyI6W10sInRva19zb3VyY2UiOiJDQ1IifQ.sb4W_qsX_NHt6fKbuOWZYxUb8bH4AhgvzLW3h07ZZKj9WApXhQP3Y8p_bo830cBbjJ02fndHu0RKVQpzuANnHnVPAj9S2s39GTckhgFnwJWRwtExQJZzPcrOvNm-nwAouZOVxluaUzrHSKe2GrXX_L_EhPyE0JYRVuQbk9aUnMhNbXjMuton-5hTsLTBpBS2nhst2w_dFuTJM1lico0Tbr8a15U69SIlhAsNdRcDW_So5nvU4mbjrQXuYhGwhWO2ml52HGYBiUsj3PM8-fXBVwNqv3r9HHw6OWG82RBnTJVKDAxGD5wDxFkKLHZ10Z0yh3NK32s3hI_EAixsPcQVQw"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Update a container version",
+      "filename": "Update a container version.bru",
+      "seq": 11,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products/9f3c4fe2-d06d-41c6-b8c7-5632da198398/versions/2.0",
+        "method": "PATCH",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"version\": {\n     \"releaseTag\":\"ALPHA_RELEASE\"\n  }\n}\n\n\n\n\n\n\n\n// {\n//   \"version\": {\n//     \"containerAssets\": {\n//         \"repositoryName\":\"bitnami/nginx\",\n//         \"imageTag\":\"latest-metadata\",\n//         \"deploymentInstruction\":\"<p>test instructions</p>\"\n//       }\n//   }\n// }\n\n\n\n\n\n// EULA\n// {\n//   \"version\":{\n//     \"compliance\": {\n//         \"encryptionDetails\":{\n//           \"nonStandardEncryption\":true,\n//           \"noEncryption\":true\n//         },\n//         \"exportCompliance\":{\n//           \"eccnDetails\":{\n//             \"eccn\":\"ECCN_5D002C\"\n//           },\n//           \"htsDetails\":{\n//             \"htsApplicable\":false\n//           },\n//           \"licenseException\": \"NLR\"\n//         },\n//         \"eulaDetails\": {\n//             \"text\":\"Hello eula is updated\"\n//         }\n//       }\n//   }\n// }\n// change only compliance combinations\n// {\n//   \"version\":{\n//     \"compliance\": {\n//         \"encryptionDetails\":{\n//           \"nonStandardEncryption\":true,\n//           \"noEncryption\":true\n//         },\n//         \"exportCompliance\":{\n//           \"eccnDetails\":{\n//             \"eccn\":\"ECCN_5D002C\"\n//           },\n//           \"htsDetails\":{\n//             \"htsApplicable\":false\n//           },\n//           \"licenseException\": \"NLR\"\n//         }\n//       }\n//   }\n// }\n// Update Encryption Details\n// {\n//   \"version\":{\n//     \"releaseTag\":\"ALPHA_RELEASE\",\n//     \"compliance\":{\n//       \"encryptionDetails\":{\n//           \"nonStandardEncryption\":true,\n//           \"securingDataAtRest\":true\n//         }\n//     }\n//   }\n// }\n// Update Release Tag\n// {\n//   \"version\":{\n//     \"releaseTag\":\"DEVELOPER_RELEASE\"\n//   }\n// }\n// {\n//   \"version\":{\n//       \"versionNumber\":\"4.0\",\n//       \"releaseTag\":\"GENERAL_AVAILABILITY\",\n//       \"vmAssets\": {\n//           \"assetURL\":\"https://cloud-images.ubuntu.com/noble/20251113/noble-server-cloudimg-amd64.ova\"\n//         },\n//       \"sbom\":\"https://dyltqmyl993wv.cloudfront.net/assets/stacks/bitnami/img/bitnami-stack-220x234.png\",\n//       \"compliance\": {\n//         \"encryptionDetails\":{\n//           \"nonStandardEncryption\":true,\n//           \"noEncryption\":true\n//         },\n//         \"exportCompliance\":{\n//           \"eccnDetails\":{\n//             \"eccn\":\"ECCN_EAR99\"\n//           },\n//           \"htsDetails\":{\n//             \"htsApplicable\":false\n//           },\n//           \"licenseException\": \"NLR\"\n//         },\n//           \"eulaDetails\": {\n//               \"text\":\"test eula\"\n//           }\n//       }\n//     }\n// }",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Get product Details",
+      "filename": "Get product Details.bru",
+      "seq": 12,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products/9f3c4fe2-d06d-41c6-b8c7-5632da198398",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Get product version Details",
+      "filename": "Get product version Details.bru",
+      "seq": 13,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products/9f3c4fe2-d06d-41c6-b8c7-5632da198398/versions/1.0",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "List Products",
+      "filename": "List Products.bru",
+      "seq": 14,
+      "settings": {
+        "encodeUrl": true
+      },
+      "tags": [],
+      "request": {
+        "url": "{{host}}/products",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "bearer",
+          "bearer": {
+            "token": "{{access-token}}"
+          }
+        }
+      }
+    }
+  ],
+  "environments": [],
+  "root": {
+    "request": {
+      "vars": {
+        "req": [
+          {
+            "name": "host",
+            "value": "http://localhost:8082/api/v3",
+            "enabled": true,
+            "local": false,
+            "uid": "lMcGj0HF3TALJ39xq0wiy"
+          },
+          {
+            "name": "auth-host",
+            "value": "http://localhost:8088/api/v3",
+            "enabled": true,
+            "local": false,
+            "uid": "G1dQGkaiRcYQ6XH1uL2wo"
+          },
+          {
+            "name": "",
+            "value": "",
+            "enabled": true,
+            "local": false,
+            "uid": "e1gOHYSCP0BNDRaXPtKQ4"
+          },
+          {
+            "name": "access-token",
+            "value": "{{accessToken}}",
+            "enabled": true,
+            "local": false,
+            "uid": "0Zoa1IgZcZkVrrOQRUkCL"
+          },
+          {
+            "name": "auth-host",
+            "value": "https://api-devlvn.broadcom.net/vcf/cm/dev/gtw/api/v3",
+            "enabled": false,
+            "local": false,
+            "uid": "IA2TJmzDCN3h6rHq9H5JI"
+          },
+          {
+            "name": "host",
+            "value": "https://api-devlvn.broadcom.net/vcf/cm/dev/gtw/api/v3",
+            "enabled": false,
+            "local": false,
+            "uid": "eZOCD4J2ixfYO4xj5gzD4"
+          }
+        ],
+        "res": [
+          {
+            "name": "",
+            "value": "",
+            "enabled": true,
+            "local": false,
+            "uid": "05FsUI28vh34Jg7QE5C4j"
+          }
+        ]
+      }
+    }
+  },
+  "brunoConfig": {
+    "version": "1",
+    "name": "Third Party Publishing APIs",
+    "type": "collection",
+    "ignore": [
+      "node_modules",
+      ".git"
+    ]
+  }
+}
