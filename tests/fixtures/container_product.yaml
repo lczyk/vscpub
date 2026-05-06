@@ -1,0 +1,44 @@
+solution:
+  product_id: "prod-xyz789"
+  display_name: "Cloud-Native Web Application"
+  license: "FREE"
+
+  marketing:
+    overview: "Scalable microservices-based web application"
+    description: "Containerized web app with load balancing and auto-scaling for VCF/Kubernetes."
+    feature_highlights:
+      - "Kubernetes-native deployment"
+      - "Horizontal auto-scaling"
+
+  support:
+    website: "https://www.example.com/support"
+    emails:
+      - "support@example.com"
+
+  tech_specs:
+    category: "BUSINESS_APPLICATION_SERVICES"
+    vcf_components:
+      - "VSPHERE_KUBERNETES_SERVICE"
+
+  version:
+    version_number: "2.1.0"
+    release_tag: "GENERAL_AVAILABILITY"
+
+    container_asset:
+      repository: "bitnami/nginx"
+      tag: "2.1.0"
+      deployment_instructions: "docker pull bitnami/nginx:2.1.0"
+
+    compliance:
+      encryption:
+        supports_encryption: true
+        types:
+          - "SECURITY_COMMUNICATION_PROTOCOLS"
+
+      export:
+        eccn: "ECCN_EAR99"
+        hts_applicable: false
+        license_exception: "NLR"
+
+      eula:
+        text: "This software is provided 'as is', without warranty of any kind."
