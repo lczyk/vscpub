@@ -1,0 +1,61 @@
+solution:
+  product_id: "prod-abc123"
+  display_name: "Enterprise Database Solution"
+  logo: "logo.png"
+  license: "BYOL"
+
+  marketing:
+    overview: "High-performance database solution for VCF environments"
+    description: "Enterprise-grade database with HA, automated backups, and VCF integration."
+    feature_highlights:
+      - "High availability with automatic failover"
+      - "Real-time data replication"
+    images:
+      - "screenshot1.png"
+    videos:
+      - "https://www.youtube.com/watch?v=example123"
+
+  support:
+    website: "https://www.example.com/support"
+    emails:
+      - "support@example.com"
+    summary: "24/7 enterprise support"
+    phones:
+      - "+1-800-123-4567"
+    resources:
+      - name: "Installation Guide"
+        url: "https://example.com/docs/install.pdf"
+
+  tech_specs:
+    os_list:
+      - "UBUNTU"
+      - "RHEL"
+    category: "DATABASES"
+    vcf_components:
+      - "VSPHERE"
+      - "VSAN"
+    technical_summary: "Requires 4 vCPUs, 16GB RAM, 100GB storage."
+
+  version:
+    version_number: "1.0.0"
+    release_tag: "GENERAL_AVAILABILITY"
+
+    vm_asset:
+      file: "database-v1.0.0.ova"
+
+    compliance:
+      encryption:
+        supports_encryption: true
+        types:
+          - "USER_AUTHENTICATION"
+          - "SECURING_DATA_AT_REST"
+        supports_non_standard_encryption: false
+
+      export:
+        eccn: "ECCN_5D992c"
+        hts_applicable: true
+        hts: "8523.49.20.00"
+        license_exception: "ENC_UNRESTRICTED"
+
+      eula:
+        url: "https://example.com/eula.pdf"
