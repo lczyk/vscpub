@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import click
+import tabulate as tabulate_mod
 
 from vscpub.client import VscClient
 from vscpub.config import load_config
@@ -78,15 +79,16 @@ def product_list(ctx: click.Context) -> None:
         click.echo("No products found.")
         return
 
-    click.echo(f"{'ID':<30}  {'NAME':<40}  {'STATUS':<12}  LICENSE")
-    click.echo("-" * 95)
-    for p in products:
-        click.echo(
-            f"{p.get('productId', ''):<30}  "
-            f"{p.get('displayName', ''):<40}  "
-            f"{p.get('status', ''):<12}  "
-            f"{p.get('solutionLicense', '')}"
-        )
+    rows = [
+        {
+            "ID": p.get("productId", ""),
+            "NAME": p.get("displayName", ""),
+            "STATUS": p.get("status", ""),
+            "LICENSE": p.get("solutionLicense", ""),
+        }
+        for p in products
+    ]
+    click.echo(tabulate_mod.tabulate(rows, headers="keys"))
 
 
 @product.command("get")
