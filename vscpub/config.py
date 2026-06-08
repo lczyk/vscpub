@@ -71,8 +71,11 @@ class ComplianceConfig:
 @dataclasses.dataclass
 class VersionConfig:
     version_number: str
-    release_tag: str
-    compliance: ComplianceConfig
+    # release_tag and compliance are required when creating a version, but
+    # optional for in-place updates (e.g. a container refresh) where only the
+    # asset changes. See _parse_version(require_full=...).
+    release_tag: str | None = None
+    compliance: ComplianceConfig | None = None
     vm_asset: VmAssetConfig | None = None
     container_asset: ContainerAssetConfig | None = None
 
@@ -116,6 +119,7 @@ class TechSpecsConfig:
 @dataclasses.dataclass
 class SolutionConfig:
     product_id: str | None = None
+    product_type: str = "DISTRIBUTABLE"
     display_name: str | None = None
     # Local file path (Path) before upload; replaced with a GCS URL (str) by
     # _resolve_product_uploads() once the file has been pushed to cloud storage.
@@ -198,13 +202,16 @@ def _parse_compliance(data: dict[str, Any], base_dir: Path) -> ComplianceConfig:
     )
 
 
-def _parse_version(data: dict[str, Any], base_dir: Path) -> VersionConfig:
+def _parse_version(
+    data: dict[str, Any], base_dir: Path, *, require_full: bool = True
+) -> VersionConfig:
     if "version_number" not in data:
         raise ConfigError("version.version_number is required")
-    if "release_tag" not in data:
-        raise ConfigError("version.release_tag is required")
-    if "compliance" not in data:
-        raise ConfigError("version.compliance is required")
+    if require_full:
+        if "release_tag" not in data:
+            raise ConfigError("version.release_tag is required")
+        if "compliance" not in data:
+            raise ConfigError("version.compliance is required")
 
     has_vm = "vm_asset" in data
     has_container = "container_asset" in data
@@ -241,16 +248,20 @@ def _parse_version(data: dict[str, Any], base_dir: Path) -> VersionConfig:
             refresh=ca.get("refresh", False),
         )
 
+    compliance = None
+    if "compliance" in data:
+        compliance = _parse_compliance(data["compliance"], base_dir)
+
     return VersionConfig(
         version_number=str(data["version_number"]),
-        release_tag=data["release_tag"],
-        compliance=_parse_compliance(data["compliance"], base_dir),
+        release_tag=data.get("release_tag"),
+        compliance=compliance,
         vm_asset=vm_asset,
         container_asset=container_asset,
     )
 
 
-def load_config(path: Path) -> SolutionConfig:
+def load_config(path: Path, *, require_full_version: bool = True) -> SolutionConfig:
     try:
         raw = yaml.safe_load(path.read_text())
     except yaml.YAMLError as e:
@@ -304,10 +315,11 @@ def load_config(path: Path) -> SolutionConfig:
 
     version = None
     if "version" in data:
-        version = _parse_version(data["version"], base_dir)
+        version = _parse_version(data["version"], base_dir, require_full=require_full_version)
 
     return SolutionConfig(
         product_id=data.get("product_id"),
+        product_type=data.get("product_type", "DISTRIBUTABLE"),
         display_name=data.get("display_name"),
         logo=logo,
         license=data.get("license"),

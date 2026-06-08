@@ -139,6 +139,13 @@ class VscClient:
         _raise_for_status(resp)
         return cast(dict[str, Any], resp.json())
 
+    def create_product(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if self._dry_run:
+            return self._dry_run_mutate("POST", "/products", payload)
+        resp = self._session.post(self._url("/products"), json=payload)
+        _raise_for_status(resp)
+        return cast(dict[str, Any], resp.json())
+
     def update_product(self, product_id: str, payload: dict[str, Any]) -> None:
         if self._dry_run:
             self._dry_run_mutate("PATCH", f"/products/{product_id}", payload)
@@ -152,6 +159,19 @@ class VscClient:
         resp = self._session.post(self._url(f"/products/{product_id}/versions"), json=payload)
         _raise_for_status(resp)
         return cast(dict[str, Any], resp.json())
+
+    def update_version(
+        self, product_id: str, version_number: str, payload: dict[str, Any]
+    ) -> None:
+        # NOTE: the OpenAPI spec spells this path singular (/version/{ver}), but the
+        # rest of this client uses the plural /versions form (create/get); kept
+        # consistent here. Returns 204 No Content, so there is no body to parse.
+        path = f"/products/{product_id}/versions/{version_number}"
+        if self._dry_run:
+            self._dry_run_mutate("PATCH", path, payload)
+            return
+        resp = self._session.patch(self._url(path), json=payload)
+        _raise_for_status(resp)
 
     def get_product_version(self, product_id: str, version_number: str) -> dict[str, Any]:
         resp = self._session.get(self._url(f"/products/{product_id}/versions/{version_number}"))

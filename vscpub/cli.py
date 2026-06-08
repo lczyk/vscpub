@@ -8,10 +8,13 @@ from vscpub.config import load_config
 from vscpub.exceptions import VscpubError
 from vscpub.workflows import (
     resolve_storage_policy,
+    run_product_create,
     run_product_update,
     run_publish,
     run_storage_create,
+    run_storage_upload,
     run_version_add,
+    run_version_update,
 )
 
 
@@ -54,6 +57,23 @@ def storage_create(ctx: click.Context) -> None:
     click.echo(json.dumps(result, indent=2))
 
 
+@storage.command("upload")
+@click.option("--storage", "storage_file", type=click.Path(exists=True), default=None)
+@click.argument("file", type=click.Path(exists=True))
+@click.pass_context
+def storage_upload(ctx: click.Context, storage_file: str | None, file: str) -> None:
+    """Upload a local file to GCS and print the resulting URL."""
+    client = _make_client(ctx)
+    dry_run = ctx.obj["dry_run"]
+    try:
+        storage_path = Path(storage_file) if storage_file else None
+        policy = resolve_storage_policy(client, storage_path, dry_run)
+        url = run_storage_upload(client, Path(file), policy, dry_run)
+    except VscpubError as e:
+        raise click.ClickException(str(e)) from e
+    click.echo(url)
+
+
 # ---------------------------------------------------------------------------
 # product
 # ---------------------------------------------------------------------------
@@ -87,6 +107,25 @@ def product_list(ctx: click.Context) -> None:
             f"{p.get('status', ''):<12}  "
             f"{p.get('solutionLicense', '')}"
         )
+
+
+@product.command("create")
+@click.option("--storage", "storage_file", type=click.Path(exists=True), default=None)
+@click.argument("yaml_file", type=click.Path(exists=True))
+@click.pass_context
+def product_create(ctx: click.Context, storage_file: str | None, yaml_file: str) -> None:
+    """Create a new product (with its initial version) from a YAML config file."""
+    client = _make_client(ctx)
+    dry_run = ctx.obj["dry_run"]
+    try:
+        config = load_config(Path(yaml_file))
+        storage_path = Path(storage_file) if storage_file else None
+        policy = resolve_storage_policy(client, storage_path, dry_run)
+        result = run_product_create(client, config, policy, dry_run)
+    except VscpubError as e:
+        raise click.ClickException(str(e)) from e
+    if not dry_run:
+        click.echo(json.dumps(result, indent=2))
 
 
 @product.command("get")
@@ -162,6 +201,25 @@ def version_add(ctx: click.Context, storage_file: str | None, yaml_file: str) ->
         raise click.ClickException(str(e)) from e
     if not dry_run:
         click.echo(json.dumps(result, indent=2))
+
+
+@version.command("update")
+@click.option("--storage", "storage_file", type=click.Path(exists=True), default=None)
+@click.argument("yaml_file", type=click.Path(exists=True))
+@click.pass_context
+def version_update(ctx: click.Context, storage_file: str | None, yaml_file: str) -> None:
+    """Update an existing version in place (e.g. a container image refresh)."""
+    client = _make_client(ctx)
+    dry_run = ctx.obj["dry_run"]
+    try:
+        config = load_config(Path(yaml_file), require_full_version=False)
+        storage_path = Path(storage_file) if storage_file else None
+        policy = resolve_storage_policy(client, storage_path, dry_run)
+        run_version_update(client, config, policy, dry_run)
+    except VscpubError as e:
+        raise click.ClickException(str(e)) from e
+    if not dry_run:
+        click.echo("Version updated.")
 
 
 # ---------------------------------------------------------------------------

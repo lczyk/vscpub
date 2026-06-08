@@ -74,14 +74,31 @@ def _resolve_uploads(
         assert isinstance(ca.file, Path), "container_asset.file must be a local Path before upload"
         ca.file = upload_file(policy, ca.file, dry_run=dry_run)
 
-    exp = config.version.compliance.export
-    if exp.ccats_document is not None:
-        assert isinstance(exp.ccats_document, Path), (
-            "ccats_document must be a local Path before upload"
-        )
-        exp.ccats_document = upload_file(policy, exp.ccats_document, dry_run=dry_run)
+    if config.version.compliance is not None:
+        exp = config.version.compliance.export
+        if exp.ccats_document is not None:
+            assert isinstance(exp.ccats_document, Path), (
+                "ccats_document must be a local Path before upload"
+            )
+            exp.ccats_document = upload_file(policy, exp.ccats_document, dry_run=dry_run)
 
     return config
+
+
+def _needs_upload(config: SolutionConfig) -> bool:
+    """True if the config references any local file that must be uploaded to GCS."""
+    if isinstance(config.logo, Path):
+        return True
+    if config.marketing is not None and any(isinstance(i, Path) for i in config.marketing.images):
+        return True
+    v = config.version
+    if v is None:
+        return False
+    if v.vm_asset is not None and isinstance(v.vm_asset.file, Path):
+        return True
+    if v.container_asset is not None and isinstance(v.container_asset.file, Path):
+        return True
+    return v.compliance is not None and isinstance(v.compliance.export.ccats_document, Path)
 
 
 def _build_encryption_payload(enc: ComplianceConfig) -> dict[str, Any]:
@@ -172,12 +189,25 @@ def _build_asset_details(version: VersionConfig) -> dict[str, Any]:
 
 
 def _build_version_payload(version: VersionConfig) -> dict[str, Any]:
+    assert version.compliance is not None, "compliance is required when creating a version"
     payload: dict[str, Any] = {
         "versionNumber": version.version_number,
         "releaseTag": version.release_tag,
         "compliance": _build_compliance_payload(version.compliance),
     }
     payload.update(_build_asset_details(version))
+    return payload
+
+
+def _build_version_update_payload(version: VersionConfig) -> dict[str, Any]:
+    """Build a partial version-update body. versionNumber is immutable (path param),
+    so it is omitted; only the fields present in the config are sent."""
+    payload: dict[str, Any] = {}
+    if version.release_tag is not None:
+        payload["releaseTag"] = version.release_tag
+    payload.update(_build_asset_details(version))
+    if version.compliance is not None:
+        payload["compliance"] = _build_compliance_payload(version.compliance)
     return payload
 
 
@@ -251,6 +281,31 @@ def _build_product_update_payload(config: SolutionConfig) -> dict[str, Any]:
     return {"product": product}
 
 
+def _build_product_create_payload(config: SolutionConfig) -> dict[str, Any]:
+    """Assemble the full Product body for POST /products. Unlike the update payload
+    this requires the complete product plus an initial version, and uses the
+    'solutionLicense' key (the update path uses 'license')."""
+    assert config.display_name is not None
+    assert config.logo is not None
+    assert config.marketing is not None
+    assert config.support is not None
+    assert config.tech_specs is not None
+    assert config.license is not None
+    assert config.version is not None
+
+    product: dict[str, Any] = {
+        "displayName": config.display_name,
+        "logoURL": str(config.logo),
+        "productType": config.product_type,
+        "marketingDetails": _build_marketing_payload(config.marketing),
+        "supportDetails": _build_support_payload(config.support),
+        "techSpecs": _build_tech_specs_payload(config.tech_specs),
+        "solutionLicense": config.license,
+        "version": _build_version_payload(config.version),
+    }
+    return {"product": product}
+
+
 def _has_product_fields(config: SolutionConfig) -> bool:
     return any(
         [
@@ -283,6 +338,41 @@ def resolve_storage_policy(
 def run_storage_create(client: VscClient) -> dict[str, str]:
     policy = client.get_storage_location()
     return policy.to_json_dict()
+
+
+def run_storage_upload(
+    client: VscClient,
+    file_path: Path,
+    storage_policy: StoragePolicy | None,
+    dry_run: bool,
+) -> str:
+    policy = _ensure_storage(client, storage_policy)
+    return upload_file(policy, file_path, dry_run=dry_run)
+
+
+def run_product_create(
+    client: VscClient,
+    config: SolutionConfig,
+    storage_policy: StoragePolicy | None,
+    dry_run: bool,
+) -> dict[str, Any]:
+    required = {
+        "display_name": config.display_name,
+        "logo": config.logo,
+        "license": config.license,
+        "marketing": config.marketing,
+        "support": config.support,
+        "tech_specs": config.tech_specs,
+        "version": config.version,
+    }
+    missing = [name for name, value in required.items() if value is None]
+    if missing:
+        raise VscpubError(f"Cannot create product, missing required fields: {', '.join(missing)}")
+
+    policy = _ensure_storage(client, storage_policy)
+    config = _resolve_uploads(config, policy, dry_run)
+    payload = _build_product_create_payload(config)
+    return client.create_product(payload)
 
 
 def run_product_update(
@@ -323,6 +413,31 @@ def run_version_add(
     assert config.version is not None
     payload: dict[str, Any] = {"version": _build_version_payload(config.version)}
     return client.create_version(product_id, payload)
+
+
+def run_version_update(
+    client: VscClient,
+    config: SolutionConfig,
+    storage_policy: StoragePolicy | None,
+    dry_run: bool,
+) -> None:
+    if config.product_id is None:
+        raise VscpubError("solution.product_id is required for version update")
+    if config.version is None:
+        raise VscpubError("solution.version is required for version update")
+
+    product_id = config.product_id
+    version_number = config.version.version_number
+
+    # A refresh (or any asset-less update) needs no GCS upload, so don't burn a
+    # storage location on it -- only fetch one when there is a local file to push.
+    if _needs_upload(config):
+        policy = _ensure_storage(client, storage_policy)
+        config = _resolve_uploads(config, policy, dry_run)
+
+    assert config.version is not None
+    payload: dict[str, Any] = {"version": _build_version_update_payload(config.version)}
+    client.update_version(product_id, version_number, payload)
 
 
 def run_publish(
