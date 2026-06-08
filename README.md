@@ -34,6 +34,18 @@ List all products for the authenticated organisation.
 vscpub product list
 ```
 
+### `product create <yaml_file>`
+
+Create a new product, including its initial version, from a YAML config. Requires the
+full config (display name, logo, license, marketing, support, tech specs, and a version
+with assets and compliance). Local files referenced in the config are uploaded to GCS
+first. Prints the new `productId` on success; the product enters `PENDING` review.
+
+```
+vscpub product create solution.yaml
+vscpub --dry-run product create solution.yaml   # preview the POST body
+```
+
 ### `product get <product_id>`
 
 Print full product details as JSON.
@@ -73,6 +85,29 @@ vscpub version add solution.yaml
 vscpub version add --storage policy.json solution.yaml
 ```
 
+### `version update <yaml_file>`
+
+Update an existing version in place, keeping the same version number -- for example to
+swap a VM/container asset or trigger a container image refresh. Only the version fields
+present in the config are sent; `release_tag` and `compliance` may be omitted.
+
+A refresh re-pulls the container image from its registry and is only accepted once the
+version is approved (`ACTIVE`).
+
+```yaml
+solution:
+  product_id: my-product-id
+  version:
+    version_number: "1.2.0"        # existing version, patched in place
+    container_asset:
+      refresh: true
+```
+
+```
+vscpub version update solution.yaml
+vscpub --dry-run version update solution.yaml   # preview the PATCH body
+```
+
 ---
 
 ### `storage create`
@@ -81,6 +116,17 @@ Fetch a GCS pre-signed POST policy and print it as JSON. Use this to obtain uplo
 
 ```
 vscpub storage create > policy.json
+```
+
+### `storage upload <file>`
+
+Upload a single local file to GCS and print its URL. Fetches a fresh pre-signed policy
+unless `--storage` points at an existing one. Useful for pushing a container image tar or
+other asset on its own, then referencing the printed URL in a config.
+
+```
+vscpub storage upload image.tar
+vscpub storage upload --storage policy.json image.tar
 ```
 
 ---
