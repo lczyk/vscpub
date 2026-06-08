@@ -235,3 +235,44 @@ solution:
     )
     cfg = load_config(f)
     assert cfg.version.container_asset.refresh is True
+
+
+def test_loose_version_allows_refresh_without_compliance(tmp_path):
+    """
+    With require_full_version=False, a version block may omit release_tag and
+    compliance -- the minimal shape for an in-place container refresh.
+    """
+    f = tmp_path / "refresh.yaml"
+    f.write_text(
+        """
+solution:
+  product_id: prod-rust
+  version:
+    version_number: "1.75-24.04_stable"
+    container_asset:
+      refresh: true
+"""
+    )
+    cfg = load_config(f, require_full_version=False)
+    assert cfg.version is not None
+    assert cfg.version.release_tag is None
+    assert cfg.version.compliance is None
+    assert cfg.version.container_asset is not None
+    assert cfg.version.container_asset.refresh is True
+
+
+def test_full_version_still_requires_compliance(tmp_path):
+    """Default (require_full_version=True) keeps compliance mandatory."""
+    f = tmp_path / "bad.yaml"
+    f.write_text(
+        """
+solution:
+  version:
+    version_number: "1.0.0"
+    release_tag: "GENERAL_AVAILABILITY"
+    container_asset:
+      refresh: true
+"""
+    )
+    with pytest.raises(ConfigError, match="compliance is required"):
+        load_config(f)

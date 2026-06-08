@@ -169,6 +169,26 @@ class TestVscClientMethods:
         assert "[DRY RUN]" in captured.err
         assert "PATCH" in captured.err
 
+    def test_update_version_sends_patch(self):
+        """Verify that update_version issues exactly one PATCH request to the API."""
+        client = _make_client()
+        mock_resp = _mock_response(204)
+        client._session.patch = MagicMock(return_value=mock_resp)
+
+        payload = {"version": {"containerAssets": {"refresh": True}}}
+        client.update_version("prod-123", "1.0.0", payload)
+        client._session.patch.assert_called_once()
+        url = client._session.patch.call_args.args[0]
+        assert url.endswith("/products/prod-123/versions/1.0.0")
+
+    def test_update_version_dry_run(self, capsys):
+        """Verify that update_version in dry-run mode logs the skipped PATCH to stderr."""
+        client = _make_client(dry_run=True)
+        client.update_version("prod-123", "1.0.0", {"version": {}})
+        captured = capsys.readouterr()
+        assert "[DRY RUN]" in captured.err
+        assert "PATCH" in captured.err
+
     def test_create_version_dry_run(self, capsys):
         """
         Verify that create_version in dry-run mode logs the skipped POST and returns an empty dict.

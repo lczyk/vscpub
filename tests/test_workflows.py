@@ -9,9 +9,11 @@ from vscpub.exceptions import VscpubError
 from vscpub.workflows import (
     _build_compliance_payload,
     _build_version_payload,
+    run_product_create,
     run_product_update,
     run_publish,
     run_version_add,
+    run_version_update,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -244,6 +246,86 @@ class TestRunVersionAdd:
 
         run_version_add(client, cfg, _make_policy(), dry_run=True)
         client.create_version.assert_called_once()
+
+
+class TestRunProductCreate:
+    def test_creates_product(self):
+        """
+        Verify run_product_create POSTs a full product payload (with productType,
+        solutionLicense, and an initial version) and returns the new productId.
+        """
+        cfg = load_config(FIXTURES / "vm_product.yaml")
+        assert cfg.version is not None and cfg.version.vm_asset is not None
+        cfg.version.vm_asset.hash_algo = "SHA256"
+        cfg.version.vm_asset.hash_digest = "abc123"
+        client = _make_client()
+        client.create_product.return_value = {"productId": "new-id"}
+
+        with (
+            patch("vscpub.workflows.upload_file", return_value="https://gcs/file"),
+            patch("vscpub.workflows.validate_hash"),
+        ):
+            result = run_product_create(client, cfg, _make_policy(), dry_run=False)
+
+        client.create_product.assert_called_once()
+        payload = client.create_product.call_args.args[0]
+        assert payload["product"]["displayName"] == "Enterprise Database Solution"
+        assert payload["product"]["solutionLicense"] == "BYOL"
+        assert payload["product"]["productType"] == "DISTRIBUTABLE"
+        assert "version" in payload["product"]
+        assert result == {"productId": "new-id"}
+
+    def test_raises_on_missing_fields(self):
+        """Verify run_product_create rejects a config missing a required section."""
+        cfg = load_config(FIXTURES / "vm_product.yaml")
+        cfg.support = None
+        client = _make_client()
+        with pytest.raises(VscpubError, match="support"):
+            run_product_create(client, cfg, _make_policy(), dry_run=True)
+
+
+class TestRunVersionUpdate:
+    def _refresh_config(self, tmp_path):
+        f = tmp_path / "refresh.yaml"
+        f.write_text(
+            """
+solution:
+  product_id: prod-rust
+  version:
+    version_number: "1.75-24.04_stable"
+    container_asset:
+      refresh: true
+"""
+        )
+        return load_config(f, require_full_version=False)
+
+    def test_refresh_patches_version_without_storage(self, tmp_path):
+        """
+        A refresh sends a containerAssets.refresh PATCH to update_version and must
+        not request a storage location (no asset to upload).
+        """
+        cfg = self._refresh_config(tmp_path)
+        client = _make_client()
+
+        run_version_update(client, cfg, None, dry_run=False)
+
+        client.get_storage_location.assert_not_called()
+        client.update_version.assert_called_once()
+        args = client.update_version.call_args.args
+        assert args[0] == "prod-rust"
+        assert args[1] == "1.75-24.04_stable"
+        payload = args[2]
+        assert payload["version"]["containerAssets"] == {"refresh": True}
+        assert "versionNumber" not in payload["version"]
+        assert "compliance" not in payload["version"]
+
+    def test_raises_without_product_id(self, tmp_path):
+        """Verify run_version_update rejects a config with no product_id."""
+        cfg = self._refresh_config(tmp_path)
+        cfg.product_id = None
+        client = _make_client()
+        with pytest.raises(VscpubError, match="product_id"):
+            run_version_update(client, cfg, None, dry_run=True)
 
 
 class TestRunProductUpdate:

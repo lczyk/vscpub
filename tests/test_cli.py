@@ -24,6 +24,7 @@ def _make_mock_client(dry_run: bool = False) -> MagicMock:
     )
     client.get_product.return_value = {"product": {"displayName": "Test", "versions": []}}
     client.create_version.return_value = {"productId": "prod-abc123", "versionNumber": "1.0.0"}
+    client.update_version.return_value = None
     client.list_products.return_value = iter(
         [
             {
@@ -68,6 +69,27 @@ class TestStorageCreate:
         data = json.loads(result.output)
         assert "url" in data
         assert "x-goog-algorithm" in data
+
+
+class TestStorageUpload:
+    def test_uploads_and_prints_url(self, tmp_path):
+        """
+        Verify that `storage upload <file>` uploads the file and prints the GCS
+        URL returned by the uploader.
+        """
+        runner, mock_client = _runner_with_client()
+        f = tmp_path / "image.tar"
+        f.write_bytes(b"tar bytes")
+        with (
+            patch("vscpub.cli.VscClient.from_env", return_value=mock_client),
+            patch("vscpub.workflows.upload_file", return_value="https://gcs/image.tar") as mock_up,
+            patch.dict("os.environ", {"VSCPUB_API_TOKEN": "tok"}),
+        ):
+            result = runner.invoke(cli, ["storage", "upload", str(f)])
+
+        assert result.exit_code == 0, result.output
+        assert "https://gcs/image.tar" in result.output
+        mock_up.assert_called_once()
 
 
 class TestProductList:
@@ -166,3 +188,30 @@ class TestVersionAdd:
 
         assert result.exit_code == 0, result.output
         mock_client.create_version.assert_called_once()
+
+
+class TestVersionUpdate:
+    def test_version_update_refresh(self, tmp_path):
+        """
+        Verify that `version update` on a refresh config calls update_version once
+        and never touches create_version.
+        """
+        runner, mock_client = _runner_with_client()
+        cfg = tmp_path / "refresh.yaml"
+        cfg.write_text(
+            "solution:\n"
+            "  product_id: prod-rust\n"
+            "  version:\n"
+            '    version_number: "1.75-24.04_stable"\n'
+            "    container_asset:\n"
+            "      refresh: true\n"
+        )
+        with (
+            patch("vscpub.cli.VscClient.from_env", return_value=mock_client),
+            patch.dict("os.environ", {"VSCPUB_API_TOKEN": "tok"}),
+        ):
+            result = runner.invoke(cli, ["version", "update", str(cfg)])
+
+        assert result.exit_code == 0, result.output
+        mock_client.update_version.assert_called_once()
+        mock_client.create_version.assert_not_called()
