@@ -85,18 +85,6 @@ Do **not** use this agent to change production code in `vscpub/`.
 
 ## Project test conventions
 
-```
-tests/
-  test_cli.py        — Click CLI integration (CliRunner)
-  test_client.py     — VscClient HTTP layer (mocked requests)
-  test_config.py     — Config loading and validation
-  test_upload.py     — GCS upload logic
-  test_workflows.py  — Business logic orchestration
-  fixtures/
-    container_product.yaml
-    vm_product.yaml
-```
-
 Run the full test suite:
 ```bash
 uv run tox -e py313
@@ -111,6 +99,8 @@ Run with coverage:
 ```bash
 uv run pytest --cov=vscpub --cov-report=term-missing tests/
 ```
+
+When adding fixtures, place them in `tests/fixtures/`.
 
 ## Examples of good test structure
 
