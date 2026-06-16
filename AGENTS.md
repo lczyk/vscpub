@@ -1,6 +1,8 @@
 # vscpub
 
 CLI tool for publishing and managing solutions on Broadcom's VCF Solutions Catalog API.
+VCF Solutions Catalog is a public cloud marketplace for advertising virtual machine
+and OCI container products.
 
 ## Setup
 
@@ -14,33 +16,11 @@ uv sync --all-extras --dev
 uv run tox -e py313   # run tests
 uv run tox -e lint    # check formatting and linting
 uv run tox -e fix     # auto-fix formatting and linting
-uv run vscpub --help  # run the CLI
+uv run vscpub --help  # get CLI help text
 ```
 
-## Authentication
-
-Set exactly one of these in the environment before running any command:
-
-```bash
-export VSCPUB_API_TOKEN=<refresh-token>
-# or
-export VSCPUB_CLIENT_ID=<id>
-export VSCPUB_CLIENT_SECRET=<secret>
-```
-
-## Architecture
-
-```
-vscpub/
-  exceptions.py   — VscpubError, ConfigError, ApiError
-  config.py       — load_config(): YAML → typed dataclasses
-  client.py       — VscClient: thin requests wrapper, 1:1 with API endpoints
-  upload.py       — GCS pre-signed POST upload + hash computation
-  workflows.py    — business logic orchestrating client + upload
-  cli.py          — Click command tree, calls workflows
-```
-
-The layering is strict: `cli → workflows → client/upload`. The CLI never calls the client or upload directly; workflows never call Click.
+Only use `vscpub` with `--help`. All functional commands require
+authentication.
 
 ## API
 
@@ -50,10 +30,14 @@ The swagger spec is at `swagger/VSC-API-Spec.yaml`. The CLI specification (YAML 
 
 ## Key conventions
 
-- YAML config files use `snake_case`; API wire format uses `camelCase`. Translation happens inside `workflows.py` (`_build_*_payload` functions).
-- Local file paths in YAML (logo, assets, screenshots) are resolved relative to the YAML file's directory, not the CWD.
-- `--dry-run` suppresses all mutating HTTP calls (`PATCH`, `POST`) and file uploads; read-only `GET` calls always execute so the workflow can produce meaningful output.
-- `--storage <file>` accepts the JSON output of `vscpub storage create`, skipping a repeat call to `GET /storage-location`.
+- YAML config files use `snake_case`; API wire format uses `camelCase`. Translation happens
+  inside `workflows.py` (`_build_*_payload` functions).
+- Local file paths in YAML (logo, assets, screenshots) are resolved relative to the YAML
+  file's directory, not the CWD.
+- `--dry-run` suppresses all mutating HTTP calls (`PATCH`, `POST`) and file uploads; read-only
+  `GET` calls always execute so the workflow can produce meaningful output.
+- `--storage <file>` accepts the JSON output of `vscpub storage create`, skipping a repeat call
+  to `GET /storage-location`.
 - Credentials are never stored in config files; environment variables only.
 
 ## Testing
